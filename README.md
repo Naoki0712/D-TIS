@@ -6,13 +6,14 @@ SignageとControllerを静的なウェブアプリとして公開します。実
 
 1. Supabaseでプロジェクトを作成します。
 2. **SQL Editor**で[`supabase/setup.sql`](supabase/setup.sql)全体を実行します。再実行しても既存の端末と履歴を残します。
-3. **Authentication → Users → Add user**でメールアドレスとパスワードの運用ユーザーを作ります。確認済みユーザーとして登録します。アプリに新規登録機能はありません。一般公開のユーザー登録が不要なら、Authのユーザー登録を無効にします。
+3. **Authentication**でメール・パスワード認証と新規登録を有効にします。**URL Configuration**のSite URLを公開サイトにし、Redirect URLsへ`https://<公開ドメイン>/controller/`と`https://<公開ドメイン>/signage/`を追加します。メール確認を使う場合、一般利用者にも送信できる独自SMTPを設定します。Supabase標準のメール送信はプロジェクトのチームメンバー宛てに制限されています。
 4. **Realtime → Settings**で **Allow public access** をオフにします。このアプリは所有者を確認するPrivate Broadcastを使います。テーブルのRealtime publicationやStorage、Edge Functionsの設定は不要です。
 5. フォルダーをGitHubへ追加し、**Settings → Pages → Source → GitHub Actions**を選びます。`main`へpushすると、同梱のワークフローがテスト・ビルド・公開を実行します。詳細は[`docs/github-pages.md`](docs/github-pages.md)を参照してください。
-6. 公開された`/signage/`と`/controller/`を開き、**Supabase Project URL**と**Publishable key**を設定します。両方の画面に手順3の同じ運用アカウントでログインします。
-7. 両画面の右下の**接続設定**に、ODPT APIトークン、またはGTFS ScheduleのZIP URLを設定します。両方で同じ配信元を指定してください。Signageを表示したまま、Controllerで路線・施設名・案内文を設定し、**Signageに反映して記録**を選びます。
+6. このD-TIS用の接続情報は組み込み済みです。別のSupabaseプロジェクトへ配置する場合だけ、管理者がGitHub Repository variablesの`VITE_SUPABASE_URL`と`VITE_SUPABASE_PUBLISHABLE_KEY`を設定して公開します。利用者によるURLやキーの入力は不要です。
+7. 公開された`/controller/`で**新規登録**します。メール確認が有効な場合は確認メールを開き、`/signage/`と`/controller/`の両方に同じアカウントでログインします。利用者ごとに自分のSignageだけが表示されます。
+8. Signageを表示したまま、Controllerで路線・施設名・案内文を設定し、**Signageに反映して記録**を選びます。上部の**LCD メイン画面**を押すと、操作するSignage、表示状態、最終応答、デバイス名、再読込をまとめて確認・変更できます。
 
-SupabaseのProject URLとpublishable keyは、GitHub Repository variablesの`VITE_SUPABASE_URL`と`VITE_SUPABASE_PUBLISHABLE_KEY`に設定して初期値にすることもできます。ブラウザーへ渡すのは公開用のキーだけです。`service_role`、`sb_secret_…`、データベースパスワードを使わないでください。
+SupabaseのProject URLとpublishable keyは、`shared/public-config.ts`の公開既定値でも指定できます。GitHub Repository variablesが優先されます。ブラウザーへ渡すのは公開用のキーだけです。`service_role`、`sb_secret_…`、データベースパスワードを使わないでください。
 
 ## 操作と同期の流れ
 
@@ -55,16 +56,16 @@ Controllerの**Signageのライブ画面**には、Signage側で描画したDOM�
 - ODPT JSONは従来の鉄道・バス情報の正規化処理をブラウザー用に移し、路線・駅・方面・時刻・種別・行先・取得できる両数を表示します。
 - GTFSは**GTFS Schedule ZIP**に対応します。運行日、例外日、24時以降の時刻、固定間隔の時刻指定を扱います。GTFS Realtimeや不定時刻の頻度運行の完全対応ではありません。
 - 配信元はブラウザーからのHTTPSアクセスとCORSを許可している必要があります。GitHub Pagesではサーバープロキシを動かせません。外部配信元でCORSを利用できない場合、許可されたGTFSを同じPages配下へ置くなど、配信条件に合う方法を用意してください。
-- ODPTトークンは各ブラウザーのlocalStorageに保存します。公開用GitHub Actionsはトークンをビルドへ埋め込みません。静的アプリで利用するAPIトークンは、その端末の利用者から完全には隠せません。
+- ODPTは管理者が設定した専用トークンを自動で使用します。利用者向けの接続設定・トークン入力はありません。静的アプリのため、利用するトークンは公開JavaScriptから参照できます。
 - 交通情報の取得失敗時は取得済みキャッシュを使用し、更新に失敗したことを表示します。両者のODPT取得時刻は別々ですが、Controllerのライブ画面で実際のSignage表示を確認できます。
 
-## 端末・設備の扱い
+## 端末・デバイスの扱い
 
 SignageはブラウザーごとのIDで登録され、同じSupabaseアカウントのControllerに表示されます。LAN内のIPアドレスやPINは使いません。別のブラウザープロファイル・別端末で開くと別のSignageになります。ブラウザーデータを消すと端末IDも失われるため、運用端末のデータを保持してください。
 
 1つのブラウザーでは同じSignageを複数タブで同時に動かさないでください。対応ブラウザーではWeb Locksで二重起動を防ぎます。Signageタブは前面で表示して運用します。
 
-設備ごとの設定は保持でき、Signage URLの`?output=設備ID`で表示対象を選びます。Controllerの設備タブを切り替えても、物理Signageの表示出力は切り替わりません。ライブ画面は、その端末で実際に開いている出力を表示します。LCD以外の物理LED・ベルの駆動は、機器側の対応が別途必要です。
+デバイスごとの設定は保持でき、Signage URLの`?output=デバイスID`で表示対象を選びます。Controllerのデバイスタブを切り替えても、物理Signageの表示出力は切り替わりません。ライブ画面は、その端末で実際に開いている出力を表示します。LCD以外の物理LED・ベルの駆動は、機器側の対応が別途必要です。
 
 ブラウザーの静的アプリからOSの再起動・電源オフはできないため、新しいControllerにはOSの電源操作を設けていません。旧`server/`とPi用スクリプトは移行前の参考資料です。新しい画面を旧LAN/PIN方式で動かす互換機能はありません。
 

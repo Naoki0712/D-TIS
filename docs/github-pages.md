@@ -7,7 +7,7 @@
 1. このフォルダーをGitHubのリポジトリへ追加します。`node_modules`、`.env`、`server/data`、既存のZIPファイルはアップロード不要です。`.gitignore`で除外しています。
 2. リポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** にします。
 3. `main`へpushすると、[`.github/workflows/pages.yml`](../.github/workflows/pages.yml)がテスト・ビルド・公開を実行します。別の既定ブランチを使う場合は、このファイルの`branches: [main]`を書き換えてください。Actions画面の **Run workflow** でも実行できます。
-4. SupabaseをREADMEの手順で設定し、公開されたSignage・Controllerの設定画面にSupabaseのURLとpublishable keyを入力します。設定を初期値として組み込みたい場合だけ、次のGitHub Repository variablesを登録してください。
+4. SupabaseをREADMEの手順で設定し、次のGitHub Repository variablesを登録します（`shared/public-config.ts`に公開既定値を用意した場合は省略できます）。接続先は公開ビルドに組み込まれるので、利用者はURLやキーを入力しません。
 
 | Repository variable | 値 |
 | --- | --- |
@@ -16,7 +16,15 @@
 
 Repository variablesは **Settings → Secrets and variables → Actions → Variables** で追加します。これらはブラウザーに渡す公開設定です。`service_role`、secret key、データベースパスワードは登録しません。
 
-ODPTトークンは各ブラウザーの設定画面へ入力します。公開ワークフローはODPTトークンをビルドへ埋め込みません。
+ODPTはアプリの専用トークンを自動で使用します。管理者が差し替える場合は`VITE_ODPT_API_TOKEN`のRepository variableを登録します。ブラウザーで使用するため公開ビルドに含まれます。GTFSを追加する場合は`VITE_GTFS_URLS`へHTTPSのZIP URLを改行区切りで設定します。
+
+## 一般利用者の登録
+
+SupabaseのAuthenticationでメール認証と新規登録を有効にします。利用者はControllerまたはSignageの「新規登録」からアカウントを作成できます。管理者によるUsersへの事前追加は不要です。SignageとControllerは同じアカウントでログインし、他の利用者の端末は表示・操作できません。
+
+メール確認を使う場合は、一般利用者へ確認メールを送れる独自SMTPを設定します。Supabaseの標準メール送信はチームメンバー宛てに制限されているため、そのままでは一般公開の登録に使えません。詳細は[SupabaseのSMTP設定](https://supabase.com/docs/guides/auth/auth-smtp)を参照してください。
+
+Authentication → URL ConfigurationのSite URLは`https://d-tis.com/controller/`、Redirect URLsには`https://d-tis.com/controller/`と`https://d-tis.com/signage/`を登録します。別の公開先ではドメインとリポジトリのサブパスを合わせてください。メール確認後は元の画面へ戻ります。
 
 ## 公開されるURL
 

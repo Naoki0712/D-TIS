@@ -61,19 +61,100 @@
 .add-equipment-form h3 { font-size: 15px; }
 .new-terminal { margin-top: 24px; }
 .new-terminal > summary { cursor: pointer; font-size: 15px; }
+
+/* Controller controls remain readable and touchable at phone widths. */
+.catalog-filters { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,2fr); gap: 12px; }
+.catalog-filters label { min-width: 0; }
+.catalog-filters select { width: 100%; }
+.catalog-more { margin: 12px 0; padding: 10px 16px; background: #393046; border: 1px solid #b9a3ff; color: white; border-radius: 8px; font-size: 16px; }
+@media(max-width:600px){.catalog-filters{grid-template-columns:minmax(0,1fr)}}
+body { font-size: 18px; line-height: 1.6; }
+.equipment-controller label, .route-dialog label { font-size: 17px; }
+.equipment-controller input, .equipment-controller select, .equipment-controller textarea,
+.route-dialog input, .route-dialog select, .route-dialog textarea { min-width: 0; font-size: 18px; }
+.equipment-controller button, .equipment-controller .preview-link,
+.route-dialog button { min-height: 44px; }
+.equipment-controller input:not([type="checkbox"]):not([type="radio"]),
+.equipment-controller select, .route-dialog input:not([type="checkbox"]),
+.route-dialog select { min-height: 48px; }
+.equipment-controller .cloud-toolbar button,
+.equipment-controller .control-button, .equipment-controller .actions,
+.equipment-controller .actions button, .route-dialog .dialog-actions button { font-size: 17px; }
+.equipment-controller .control-help, .equipment-controller .feedback,
+.equipment-controller .eyebrow, .equipment-controller .muted,
+.equipment-controller .ticker-editor small, .route-dialog .muted,
+.route-dialog .check-row small { font-size: 15px; }
+.equipment-controller .control-help { overflow-wrap: anywhere; }
+.equipment-controller .section-heading { font-size: 21px; }
+.equipment-controller .section-heading .add-route { min-height: 48px; font-size: 17px; }
+.equipment-controller .equipment-shelf { min-height: 124px; }
+.equipment-controller .equipment-book { flex-basis: 170px; height: 112px; padding: 10px 14px; }
+.equipment-controller .equipment-book.selected { height: 120px; }
+.equipment-controller .book-type { font-size: 14px; }
+.equipment-controller .equipment-book strong { margin-top: 5px; font-size: 18px; }
+.equipment-controller .equipment-book small { margin-top: 2px; font-size: 14px; color: #c7c3d0; }
+.equipment-controller .equipment-add { min-width: 48px; height: 64px; }
+.equipment-controller .cloud-preview > header { font-size: 16px; }
+.equipment-controller .cloud-preview > header h2 { font-size: 20px; }
+.equipment-controller .cloud-preview > footer { font-size: 15px; }
+.equipment-controller .cloud-preview-stage p { font-size: 17px; }
+.equipment-controller .cloud-toolbar { gap: 12px; }
+.equipment-controller .cloud-toolbar > button { padding: 12px 18px; }
+.equipment-controller .route-card small { font-size: 15px; }
+.equipment-controller .route-card strong { font-size: 21px; }
+.equipment-controller .page-title { overflow-wrap: anywhere; }
+.equipment-controller .page-title i { flex-shrink: 0; }
+.equipment-controller .actions { gap: 16px; padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+.equipment-controller .actions button { min-height: 52px; }
+.equipment-controller .equipment-empty p { font-size: 17px; }
+.device-dialog { max-height: calc(100svh - 32px); overflow-y: auto; }
+.device-settings-dialog { width: min(600px, calc(100% - 32px)); }
+.device-settings-dialog .dialog-head { gap: 12px; }
+.device-settings-dialog .dialog-head h2 { font-size: 26px; }
+.device-settings-dialog .dialog-head > button { flex: 0 0 44px; }
+.device-settings-dialog .cloud-sync { flex-direction: column; align-items: flex-start; gap: 6px; font-size: 16px; overflow-wrap: anywhere; }
+.device-settings-dialog .equipment-name-field { max-width: none; margin: 22px 0 16px; }
+.device-settings-dialog select { text-overflow: ellipsis; }
+.device-settings-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #555; }
+.device-settings-footer .preview-link { display: inline-flex; align-items: center; margin: 0; font-size: 17px; }
+.route-dialog .dialog-head h2 { font-size: 25px; line-height: 1.4; }
+.route-dialog .dialog-head > button { min-width: 44px; }
+.route-dialog .search-results { max-height: 30svh; }
+.route-dialog .search-results button strong { font-size: 18px; }
+.route-dialog .search-results button small { font-size: 15px; overflow-wrap: anywhere; }
+.route-dialog .route-fields legend, .route-dialog .check-row { font-size: 17px; }
+.route-dialog .check-row { min-height: 44px; }
+.route-dialog .dialog-actions { flex-wrap: wrap; }
+@media (max-width: 960px) {
+  .equipment-controller .app-header { flex-wrap: wrap; }
+  .equipment-controller .equipment-shelf-wrapper { flex: 1 0 100%; max-width: 100%; margin: 0; padding: 0 12px; }
+}
 @media (max-width: 760px) {
   .equipment-controller .app-header { flex-wrap: wrap; }
   .equipment-shelf-wrapper { flex: 1 0 100%; max-width: 100%; margin: 0; padding: 0 12px; }
-  .equipment-shelf { min-height: 94px; }
-  .equipment-book { flex-basis: 108px; height: 74px; }
-  .equipment-book.selected { height: 86px; }
+  .equipment-controller .equipment-shelf { min-height: 112px; }
+  .equipment-controller .equipment-book { flex-basis: 158px; height: 100px; }
+  .equipment-controller .equipment-book.selected { height: 108px; }
   .equipment-popover { max-height: calc(100svh - 210px); }
   .customize-heading { align-items: flex-start; }
   .customize-heading .text-button { max-width: 95px; font-size: 11px; }
   .equipment-page .page-title { font-size: 26px; }
   .route-card { flex-basis: min(315px, 85vw); }
-  .equipment-page .section-heading .add-route { padding: 10px 13px; font-size: 12px; }
+  .equipment-page .section-heading .add-route { padding: 10px 13px; }
   .route-dialog { padding: 20px; }
   .dialog-actions { flex-wrap: wrap; }
   .equipment-empty h1 { font-size: 24px; }
+  .equipment-controller .cloud-toolbar { display: grid; grid-template-columns: 1fr; }
+  .equipment-controller .cloud-toolbar > button { width: 100%; }
+  .equipment-controller .actions { position: static; flex-direction: column; align-items: stretch; gap: 10px; }
+  .equipment-controller .equipment-page { padding-bottom: 90px; }
+  .equipment-controller .actions > span { font-size: 15px; }
+  .equipment-controller .cloud-preview > header { gap: 6px; padding: 12px; }
+  .equipment-controller .cloud-preview > header h2 { width: 100%; }
+  .equipment-controller .cloud-preview > footer { padding: 12px; }
+  .device-settings-dialog { padding: 20px; }
+  .device-settings-dialog .cloud-sync { font-size: 16px; }
+  .device-settings-dialog form button, .device-settings-footer > button { width: 100%; }
+  .route-dialog .dialog-actions button { flex: 1 1 auto; }
+  .route-dialog .dialog-actions .route-delete { flex-basis: 100%; }
 }
