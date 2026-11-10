@@ -1,0 +1,14 @@
+node_modules/
+**/dist/
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+*.zip
+artifacts/
+test-results/
+playwright-report/
+supabase/.temp/
+server/data/
+server/data/*.tmp
+server/data/pairing.json
