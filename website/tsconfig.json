@@ -1,0 +1,1 @@
+{"compilerOptions":{"composite":true,"target":"ES2022","lib":["ES2022","DOM"],"module":"ESNext","moduleResolution":"Bundler","jsx":"react-jsx","strict":true,"skipLibCheck":true,"noEmit":true},"include":["src","vite.config.ts","../shared/app-urls.ts","../shared/base-path.ts","../shared/vite-pages.ts","../shared/root-assets-plugin.ts"]}

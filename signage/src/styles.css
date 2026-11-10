@@ -1,0 +1,95 @@
+.signage { width: 100%; min-height: 100svh; display: flex; flex-direction: column; }
+.signage { --board-number: clamp(72px, 8.4vw, 180px); --board-destination: clamp(48px, 6vw, 130px); --board-heading: clamp(26px, 2.9vw, 58px); --board-type: clamp(26px, 3.5vw, 70px); --board-secondary: clamp(18px, 1.9vw, 38px); --board-icon: clamp(88px, 8.6vw, 180px); }
+.departure-pages { flex: 1; position: relative; display: flex; flex-direction: column; }
+.departure-board, .bus-board, .odpt-empty { flex: 1; display: flex; flex-direction: column; padding: clamp(20px, 3vh, 40px) var(--page-space); }
+.route-heading { display: grid; grid-template-columns: clamp(64px, 6vw, 120px) minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: clamp(16px, 2vw, 38px); }
+.route-heading > img { width: 100%; aspect-ratio: 1; object-fit: contain; }
+.route-name, .direction-name, .destination-name, .train-type { min-width: 0; }
+.route-name h2, .direction-name h2 { font-size: var(--board-heading); }
+.train-type strong, .bus-message, .no-service { font-size: var(--board-type); }
+.destination-name strong { font-size: var(--board-destination); }
+.bus-title h1, .odpt-empty h2 { font-size: var(--text-ja-large); }
+.route-name h2, .direction-name h2, .bus-title h1, .odpt-empty h2 { margin: 0; line-height: 1.2; }
+.route-name p, .direction-name p, .train-type span, .destination-name span { font-size: var(--board-secondary); margin: 6px 0 0; line-height: 1.3; }
+.bus-title p, .odpt-empty p, .odpt-empty > span { font-size: var(--text-secondary); margin: 6px 0 0; line-height: 1.4; }
+.direction-name, .bus-title { padding-bottom: 12px; border-bottom: 8px solid var(--line-color); }
+.route-name, .direction-name, .destination-name { overflow-wrap: anywhere; }
+.departure-list { margin-top: clamp(12px, 3vh, 32px); }
+.departure-list article { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) var(--board-icon) minmax(0, 2.7fr); align-items: center; gap: clamp(14px, 1.7vw, 36px); padding-block: clamp(20px, 3.4vh, 44px); border-bottom: 3px solid #3a3a3a; }
+.departure-list article:last-child { border-bottom: 0; }
+.departure-list article > time { font-size: var(--board-number); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -.055em; }
+.train-type { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.train-type strong { font-size: calc(var(--board-type) * var(--type-scale, 1)); color: var(--train-type-color, #0c58a4); line-height: 1.25; white-space: nowrap; -webkit-text-stroke: 3px #fff; paint-order: stroke fill; }
+.train-type span { max-width: 100%; overflow-wrap: anywhere; }
+.destination-code { width: 100%; aspect-ratio: 1; object-fit: contain; }
+.destination-name strong, .destination-name span { display: block; }
+.destination-name strong { line-height: 1.15; }
+.departure-list article.without-train-type { grid-template-columns: minmax(0, 1.25fr) var(--board-icon) minmax(0, 3.7fr); }
+.route-heading.hide-line-name, .route-heading.hide-direction { grid-template-columns: clamp(64px, 6vw, 120px) minmax(0, 1fr); }
+.route-heading.hide-line-name.hide-direction { grid-template-columns: clamp(64px, 6vw, 120px); }
+.train-type .car-count { color: #eee; border: 1px solid #777; border-radius: 6px; padding: 2px 9px; white-space: nowrap; }
+.train-type.with-car-count { display: grid; grid-template-columns: minmax(0, auto) auto; justify-content: center; column-gap: 8px; }
+.train-type.with-car-count strong { grid-column: 1; grid-row: 1; font-size: calc(var(--board-type) * var(--type-scale, 1) * .8); }
+.train-type.with-car-count > span:not(.car-count) { grid-column: 1 / -1; grid-row: 2; }
+.train-type.with-car-count .car-count { grid-column: 2; grid-row: 1; margin: 0; font-size: max(14px, calc(var(--board-secondary) * .8)); }
+.train-type.with-car-count.type-hidden { display: flex; }
+.signage.has-ticker { --ticker-height: clamp(44px, 6.4vh, 76px); --board-unit: calc((100svh - var(--ticker-height)) / 100); }
+.signage-ticker { flex: none; height: var(--ticker-height); width: 100%; overflow: hidden; background: #303030; border-top: 2px solid #8f74df; font-size: clamp(22px, 2.3vw, 42px); line-height: calc(var(--ticker-height) - 2px); }
+.ticker-track { display: flex; width: max-content; animation: signage-ticker-scroll var(--ticker-duration, 30s) linear infinite; }
+.ticker-track > span { flex: none; min-width: 100vw; padding: 0 32px; white-space: pre; }
+.signage-ticker:hover .ticker-track, .signage-ticker:focus .ticker-track { animation-play-state: paused; }
+@keyframes signage-ticker-scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .signage-ticker { overflow-x: auto; } .ticker-track { animation: none; } .ticker-track > span[aria-hidden] { display: none; } }
+.long-destination strong { font-size: calc(var(--board-destination) * .65); }
+.combined { --board-number: clamp(50px, min(7vw, calc(var(--board-unit, 1vh) * 9.5)), 120px); --board-destination: clamp(32px, min(5vw, calc(var(--board-unit, 1vh) * 7)), 90px); --board-heading: clamp(22px, min(2.7vw, calc(var(--board-unit, 1vh) * 3.5)), 44px); --board-type: clamp(22px, min(3vw, calc(var(--board-unit, 1vh) * 4.1)), 50px); --board-secondary: clamp(16px, min(1.7vw, calc(var(--board-unit, 1vh) * 2.2)), 30px); --board-icon: clamp(58px, min(6.5vw, calc(var(--board-unit, 1vh) * 10)), 120px); }
+.combined .departure-board { padding-block: clamp(8px, calc(var(--board-unit, 1vh) * 1), 14px); }
+.combined .departure-board + .departure-board { border-top: 2px solid #555; }
+.combined .route-heading { grid-template-columns: clamp(54px, min(5vw, calc(var(--board-unit, 1vh) * 8)), 88px) minmax(0, 1fr) minmax(0, 1fr); }
+.combined .route-heading.hide-line-name, .combined .route-heading.hide-direction { grid-template-columns: clamp(54px, min(5vw, calc(var(--board-unit, 1vh) * 8)), 88px) minmax(0, 1fr); }
+.combined .route-heading.hide-line-name.hide-direction { grid-template-columns: clamp(54px, min(5vw, calc(var(--board-unit, 1vh) * 8)), 88px); }
+.combined .departure-list { margin-top: 8px; }
+.combined .departure-list article { padding-block: clamp(5px, calc(var(--board-unit, 1vh) * .8), 12px); }
+.combined .direction-name { padding-bottom: 6px; border-bottom-width: 6px; }
+.page-indicator { margin: auto var(--page-space) 12px auto; color: #aaa; font-size: 18px; font-variant-numeric: tabular-nums; }
+.no-service { padding-block: 60px; text-align: center; }
+.odpt-empty { justify-content: center; gap: 12px; }
+.odpt-empty > span { color: #b9a3ff; }
+.odpt-empty p, .bus-message { color: #bbb; }
+.bus-title { border-color: #e58ab6; }
+.bus-message { flex: 1; display: grid; place-content: center; text-align: center; padding-block: 60px; }
+.signage-pair-button { padding: 10px 16px; border: 1px solid #79699f; border-radius: 12px; color: #e5ddff; background: #292332; font-size: 15px; }
+.signage-pair-button:hover { background: #3b304d; }
+.signage-pair-button:disabled { cursor: wait; opacity: .6; }
+.signage-connection-error, .signage-power-error { margin: 0; padding: 12px var(--page-space); color: #ffdc9c; background: #3b2d1c; font-size: 16px; line-height: 1.5; }
+.signage-power-error { color: #ffc6c6; background: #452424; }
+.signage-pairing { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(24px, 4vh, 64px) var(--page-space); text-align: center; }
+.signage-pairing-label, .signage-power-overlay span { color: #b9a3ff; font-size: 18px; letter-spacing: .16em; }
+.signage-pairing h1 { margin: 16px 0; font-size: clamp(28px, 3.6vw, 52px); }
+.signage-pairing p { margin: 8px 0; max-width: 850px; color: #c6c6ce; font-size: clamp(16px, 1.7vw, 24px); line-height: 1.6; }
+.signage-controller-urls { display: flex; flex-direction: column; gap: 8px; max-width: 100%; margin: 16px 0; }
+.signage-controller-urls a { color: #d0c0ff; font-size: clamp(19px, 2.6vw, 36px); overflow-wrap: anywhere; text-underline-offset: 6px; }
+.signage-pin { max-width: 100%; margin: 12px 0 0; padding: 12px 20px 12px calc(20px + .15em); border: 1px solid #665681; border-radius: 20px; color: #fff; background: #2b2436; font-size: clamp(48px, 10vw, 132px); font-variant-numeric: tabular-nums; letter-spacing: .15em; line-height: 1.3; }
+.signage-pairing .signage-pin-expiry { color: #b9a3ff; font-variant-numeric: tabular-nums; }
+.signage-pairing .signage-device-name { margin-top: 24px; font-size: 15px; color: #92909b; }
+.signage-paused { background: #000; }
+.signage-pause-message { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: var(--page-space); text-align: center; color: #777; }
+.signage-pause-message h1 { font-size: clamp(20px, 3vw, 36px); }
+.signage-pause-message p { margin: 0 0 24px; font-size: 16px; }
+.signage-power-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: var(--page-space); background: #141117f5; text-align: center; }
+.signage-power-overlay h1 { font-size: clamp(26px, 4vw, 56px); }
+.signage-power-overlay p { max-width: 800px; color: #c6c6ce; line-height: 1.7; font-size: clamp(16px, 2vw, 26px); }
+@media (max-width: 720px) {
+  .signage { --board-number: clamp(64px, 14vw, 100px); --board-destination: clamp(38px, 8vw, 60px); --board-heading: clamp(23px, 5vw, 34px); --board-type: clamp(24px, 5vw, 36px); --board-secondary: clamp(16px, 3.2vw, 23px); }
+  .signage .app-header > .signage-pair-button { order: 3; margin: 0 12px 12px auto; }
+  .route-heading { grid-template-columns: 48px minmax(0, 1fr); gap: 12px; }
+  .route-heading > img { width: 48px; height: 48px; }
+  .direction-name { grid-column: 1 / -1; }
+  .combined .route-heading { grid-template-columns: 48px minmax(0, 1fr); }
+  .departure-list article { grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr); gap: 16px 12px; padding-block: 20px; }
+  .departure-list article > time { grid-column: 1 / 3; }
+  .train-type { grid-column: 3; }
+  .train-type strong { -webkit-text-stroke-width: 2px; }
+  .destination-code { grid-column: 1; }
+  .destination-name { grid-column: 2 / -1; }
+  .departure-list article.without-train-type { grid-template-columns: 56px minmax(0, 1fr) minmax(0, 1fr); }
+}

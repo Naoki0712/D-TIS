@@ -1,0 +1,9 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./signage" },
+    { "path": "./controller" },
+    { "path": "./website" },
+    { "path": "./server" }
+  ]
+}

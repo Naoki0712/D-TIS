@@ -1,0 +1,35 @@
+.cloud-setup-panel { max-width: 760px; margin: 6vh auto; padding: 24px; }
+.cloud-setup-panel h1 { font-size: clamp(26px,4vw,42px); margin: 12px 0 24px; }
+.cloud-setup-panel p,.cloud-form small { color: #bcbcc7; line-height: 1.7; }
+.cloud-eyebrow { color: #b9a3ff !important; font-size: 14px; letter-spacing: .12em; }
+.cloud-form { display: flex; flex-direction: column; gap: 16px; margin-top: 24px; text-align: left; }
+.cloud-form label { display: flex; flex-direction: column; gap: 8px; font-size: 16px; }
+.cloud-form input,.cloud-form textarea { width: 100%; min-width: 0; padding: 12px; color: white; background: #19191e; border: 1px solid #666; border-radius: 8px; }
+.cloud-form button,.cloud-account-panel > button { padding: 12px 18px; color: white; background: #65508c; border: 1px solid #9b83c9; border-radius: 8px; }
+.cloud-form small { font-size: 13px; }
+.cloud-error { color: #ffb9b9 !important; }
+.cloud-account { position: fixed; bottom: 12px; right: 12px; z-index: 30; font-size: 13px; }
+.cloud-account > summary { cursor: pointer; padding: 9px 12px; background: #25232ddd; border: 1px solid #7b6b99; border-radius: 8px; }
+.cloud-account[open] { width: min(430px,calc(100vw - 24px)); }
+.cloud-account-panel { max-height: 80svh; overflow: auto; padding: 18px; background: #28252f; border: 1px solid #7b6b99; border-radius: 8px; box-shadow: 0 12px 60px #0008; }
+.cloud-account-panel > p { overflow-wrap: anywhere; }
+.cloud-account-panel > button { margin: 8px 6px 0 0; font-size: 13px; }
+.cloud-account-panel h3 { margin: 0; }
+.cloud-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.cloud-toolbar select { max-width: 100%; }
+.cloud-toolbar button,.cloud-toolbar select { padding: 10px 14px; border: 1px solid #666; border-radius: 8px; background: #292731; color: white; }
+.cloud-toolbar button:disabled { opacity: .45; cursor: default; }
+.cloud-sync { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border: 1px solid #4d445e; border-radius: 10px; font-size: 14px; background: #25212d; }
+.cloud-sync .online { color: #7fe8b1; }.cloud-sync .offline { color: #ffc778; }
+.cloud-preview { background: #101014; border: 1px solid #4d445e; border-radius: 12px; overflow: hidden; margin: 20px 0 28px; }
+.cloud-preview > header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 14px 18px; font-size: 14px; background: #302a3d; }
+.cloud-preview > header h2 { font-size: 17px; margin: 0 auto 0 0; }
+.cloud-preview-stage { min-height: 180px; max-height: 560px; display: grid; place-items: center; overflow: hidden; }
+.cloud-preview-stage img,.cloud-preview-stage video { display: block; max-width: 100%; max-height: 560px; object-fit: contain; }
+.cloud-preview-stage p { padding: 24px; color: #aaa5b5; font-size: 15px; text-align: center; }
+.cloud-preview > footer { padding: 10px 18px; font-size: 12px; color: #b6afc2; }
+.cloud-history { margin: 28px 0; font-size: 14px; }.cloud-history li { padding: 10px 0; border-bottom: 1px solid #444; }
+.signage-sharing { position: fixed; bottom: 12px; left: 12px; z-index: 25; display: flex; gap: 8px; }
+.signage-sharing button { padding: 9px 12px; font-size: 13px; background: #26232ddd; color: white; border: 1px solid #7b6b99; border-radius: 8px; }
+.signage-sharing span { font-size: 12px; padding: 10px; color: #ffdc9c; background: #26232ddd; }
+@media(max-width:720px){.cloud-sync{font-size:12px}.cloud-preview-stage{min-height:120px}.signage-sharing{bottom:52px}}

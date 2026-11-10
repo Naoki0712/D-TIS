@@ -1,0 +1,40 @@
+{
+  "name": "d-tis-signage",
+  "private": true,
+  "version": "0.3.0",
+  "workspaces": [
+    "signage",
+    "server",
+    "controller",
+    "website"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n HOME,SIGNAGE,CONTROLLER -c yellow,cyan,magenta \"npm run dev -w website\" \"npm run dev -w signage\" \"npm run dev -w controller\"",
+    "check": "tsc -b signage controller website",
+    "build": "npm run check && node scripts/build-pages.mjs",
+    "preview": "node scripts/preview-pages.mjs",
+    "start": "npm run preview",
+    "test": "node --import tsx --test signage/test/*.test.ts shared/test/*.test.ts && node --test supabase/test/*.test.mjs scripts/test/*.test.mjs",
+    "test:e2e": "playwright test",
+    "package:source": "node scripts/package-source.mjs",
+    "dev:legacy": "concurrently -k -n SERVER,SIGNAGE,CONTROLLER -c yellow,cyan,magenta \"npm run dev -w server\" \"npm run dev -w signage\" \"npm run dev -w controller\"",
+    "build:legacy": "npm run build -w signage && npm run build -w controller && npm run build -w server",
+    "start:legacy": "npm run start -w server",
+    "test:legacy": "npm run test -w server"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "0.5.16",
+    "@playwright/test": "1.65.0",
+    "concurrently": "^9.2.1",
+    "tsx": "4.23.15"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.119.0",
+    "fflate": "0.8.3",
+    "html-to-image": "1.11.13"
+  }
+}

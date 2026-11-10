@@ -1,0 +1,48 @@
+:root {
+  --latin-font: Helvetica, Inter, "BIZ UDPGothic", sans-serif;
+  --text-ja-large: clamp(28px, 3.6vw, 52px);
+  --text-ja-small: clamp(20px, 2.4vw, 34px);
+  --text-secondary: clamp(16px, 1.6vw, 23px);
+  --text-number: clamp(36px, 5.4vw, 78px);
+  --page-space: clamp(16px, 2.2vw, 42px);
+  --header-height: 104px;
+  --surface: #1d1d1d;
+  --line-color: #8f74df;
+}
+html.windows { --latin-font: Inter, "BIZ UDPGothic", sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; color: #fff; background: var(--surface); font-family: var(--latin-font); font-weight: 700; font-size: var(--text-secondary); }
+button, input, select, textarea { font: inherit; }
+button, a, input, select { -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #b9a3ff; outline-offset: 4px; }
+.app-header { position: relative; min-height: var(--header-height); display: flex; align-items: center; gap: 16px; background: #363636; }
+.app-facility { position: absolute; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; max-width: calc(100% - 800px); text-align: center; overflow-wrap: anywhere; }
+.app-facility strong { font-size: clamp(26px, 2.7vw, 52px); line-height: 1.15; }
+.app-facility span { margin-top: 3px; font-size: clamp(13px, 1.2vw, 22px); line-height: 1.25; }
+.app-logo { align-self: stretch; width: 220px; flex-shrink: 0; display: flex; align-items: center; padding: 16px 36px; border-radius: 0 0 90px 0; background: var(--surface); }
+.app-logo img { display: block; width: 132px; height: 66px; object-fit: contain; }
+.app-navigation { position: relative; z-index: 10; margin-left: -52px; }
+.app-product { display: flex; align-items: center; gap: 18px; padding: 10px 24px; border: 0; border-radius: 99px; color: #fff; background: #000; font-size: var(--text-secondary); }
+.app-product span { border-top: 12px solid #fff; border-left: 12px solid transparent; border-right: 12px solid transparent; }
+.app-product[aria-expanded="true"] span { transform: rotate(180deg); }
+.app-dropdown { position: absolute; top: calc(100% + 8px); left: 0; min-width: 100%; padding: 8px; border: 1px solid #666; border-radius: 16px; background: #111; box-shadow: 0 8px 24px #0008; }
+.app-dropdown a { display: block; padding: 12px 16px; border-radius: 8px; color: #fff; text-decoration: none; font-size: var(--text-secondary); }
+.app-dropdown a:hover { background: #363636; }
+.app-header time { margin-left: auto; padding-right: var(--page-space); font-size: var(--text-number); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 1100px) {
+  .app-header-with-facility { flex-wrap: wrap; }
+  .app-facility { position: static; order: 5; flex: 0 0 100%; max-width: none; transform: none; padding: 4px 16px 14px; }
+}
+@media (max-width: 720px) {
+  :root { --header-height: 80px; }
+  .app-header { flex-wrap: wrap; gap: 8px; }
+  .app-logo { width: 94px; padding: 12px; border-radius: 0 0 32px 0; }
+  .app-logo img { width: 70px; height: 42px; }
+  .app-navigation { margin-left: -12px; }
+  .app-product { padding: 10px 12px; gap: 10px; }
+  .app-product span { border-top-width: 8px; border-left-width: 8px; border-right-width: 8px; }
+}
+@media (max-width: 380px) {
+  .app-header time { flex-basis: 100%; text-align: right; padding-bottom: 8px; }
+}
