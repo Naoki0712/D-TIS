@@ -33,3 +33,16 @@
 .signage-sharing button { padding: 9px 12px; font-size: 13px; background: #26232ddd; color: white; border: 1px solid #7b6b99; border-radius: 8px; }
 .signage-sharing span { font-size: 12px; padding: 10px; color: #ffdc9c; background: #26232ddd; }
 @media(max-width:720px){.cloud-sync{font-size:12px}.cloud-preview-stage{min-height:120px}.signage-sharing{bottom:52px}}
+
+.cloud-setup { font-size: 17px; line-height: 1.6; }
+.cloud-form input,.cloud-form textarea,.cloud-form button { font-size: 18px; min-height: 48px; box-sizing: border-box; }
+.cloud-form small,.cloud-auth-help { font-size: 15px; }
+.cloud-auth-tabs { display: flex; gap: 8px; margin-top: 24px; }
+.cloud-auth-tabs button,.cloud-resend { padding: 12px 18px; min-height: 48px; border: 1px solid #7b6b99; border-radius: 8px; background: #25232d; color: #fff; font: inherit; cursor: pointer; }
+.cloud-auth-tabs button { flex: 1; }
+.cloud-auth-tabs [aria-selected="true"] { background: #65508c; border-color: #c5a9ff; }
+.cloud-resend { margin-top: 18px; }
+.cloud-setup-panel .cloud-notice { color: #9ce5b6; }
+.cloud-account { font-size: 16px; }
+.cloud-account > summary,.cloud-account-panel > button { min-height: 44px; box-sizing: border-box; font-size: 16px; }
+@media(max-width:600px){.cloud-setup-panel{margin:24px auto;padding:20px}.cloud-auth-tabs{gap:8px}.cloud-account{bottom:8px;right:8px}}

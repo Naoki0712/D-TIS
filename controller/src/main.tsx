@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { AppHeader, appUrl } from "../../shared/AppHeader";
 import { CloudGate } from "../../shared/CloudSetup";
 import { LivePreview } from "../../shared/live-preview";
-import { getDevice, listDevices, listDeviceEvents, newCommand, sendCommand, subscribeDevice, type CommandAction, type DeviceChannel, type DeviceEvent, type DeviceRecord } from "../../shared/cloud";
+import { getDevice, listDevices, listDeviceEvents, newCommand, sendCommand, subscribeDevice, type CommandAction, type DeviceChannel, type DeviceRecord } from "../../shared/cloud";
 import { getOdptCatalog, loadOdptData } from "../../shared/browser-odpt";
 import { mergeDeviceList, mergeDeviceSnapshot } from "../../shared/cloud-view-state";
 import { effectiveDisplaySettings, selectOutput, withOutputSettings, type FacilitySettings, type DeviceType } from "../../shared/display-settings";
@@ -19,7 +19,6 @@ import "./equipment.css";
 document.documentElement.classList.toggle("windows", navigator.userAgent.includes("Windows"));
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 const time = (value: string) => new Date(value).toLocaleString("ja-JP");
-const actionName: Record<string, string> = { settings: "表示設定を適用", display: "表示の停止・再開", refresh: "データを更新" };
 const typeName: Record<DeviceType, string> = { lcd: "LCDサイネージ", led: "LED発車標", "bell-switch": "操作デバイス" };
 
 function App() {
@@ -36,7 +35,6 @@ function App() {
   const [lines, setLines] = useState<CatalogLine[]>([]);
   const [catalogNote, setCatalogNote] = useState("ODPTから路線を取得しています…");
   const [odptNote, setOdptNote] = useState("");
-  const [events, setEvents] = useState<DeviceEvent[]>([]);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -44,7 +42,9 @@ function App() {
   const [reload, setReload] = useState(0);
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<DeviceType>("lcd");
+  const [deviceMenuOpen, setDeviceMenuOpen] = useState(false);
   const addDialog = useRef<HTMLDialogElement>(null);
+  const deviceDialog = useRef<HTMLDialogElement>(null);
   const operation = useRef(false);
   const dirtyRef = useRef(false);
   const activeRef = useRef(activeId);
@@ -72,7 +72,7 @@ function App() {
   }, [reload]);
 
   useEffect(() => {
-    setDraft(null); setLoadedId(""); setDirty(false); dirtyRef.current = false; setOutputId(""); setNote(""); setEvents([]);
+    setDraft(null); setLoadedId(""); setDirty(false); dirtyRef.current = false; setOutputId(""); setNote("");
   }, [activeId]);
   useEffect(() => {
     if (!active || dirtyRef.current || operation.current) return;
@@ -115,17 +115,11 @@ function App() {
   }, [activeId]);
 
   useEffect(() => {
-    let alive = true;
-    if (!activeId) return;
-    void listDeviceEvents(activeId).then(rows => { if (alive) setEvents(rows); }).catch(error => { if (alive) setNote(message(error)); });
-    return () => { alive = false; };
-  }, [activeId, active?.revision, reload]);
-  useEffect(() => {
     const abort = new AbortController();
     if (!active) return;
     setOdptNote("Controller側の交通情報を更新しています…");
     void loadOdptData(effectiveDisplaySettings(active.settings, outputId), undefined, abort.signal, true).then(data => {
-      if (!abort.signal.aborted) setOdptNote(data.source === "unavailable" ? data.error ?? "交通情報を取得できません。接続設定を確認してください。"
+      if (!abort.signal.aborted) setOdptNote(data.source === "unavailable" ? data.error ?? "交通情報を取得できません。時間をおいて再度お試しください。"
         : `${data.source === "cache" ? "保存済み" : "ODPT・GTFS取得済み"} · ${data.timetables.length}件の時刻表${data.fetchedAt ? ` · ${time(data.fetchedAt)}` : ""}`);
     }).catch(error => { if (!abort.signal.aborted) setOdptNote(message(error)); });
     return () => abort.abort();
@@ -175,7 +169,7 @@ function App() {
       try {
         const [record, history] = await Promise.all([getDevice(id), listDeviceEvents(id, 100)]);
         if (activeRef.current !== id) return;
-        setDevices(rows => rows.map(row => row.id === id ? mergeDeviceSnapshot(row, record) : row)); setEvents(history);
+        setDevices(rows => rows.map(row => row.id === id ? mergeDeviceSnapshot(row, record) : row));
         if (history.some(event => event.command_id === command.id)) {
           setDraft(record.settings); setBaseRevision(record.revision); setDirty(false); dirtyRef.current = false;
           setNote(`完了通知を受信できませんでしたが、Supabaseの記録から反映済みと確認しました（リビジョン ${record.revision}）。`);
@@ -184,7 +178,14 @@ function App() {
     } finally { operation.current = false; setBusy(false); }
   }
   function save(event: FormEvent) {
-    event.preventDefault(); if (draft) void operate("settings", { ...draft, updatedAt: new Date().toISOString() });
+    event.preventDefault();
+    if (!draft) return;
+    if (draft.devices.some(device => !device.name.trim())) { setNote("デバイス名を入力してください。"); return; }
+    void operate("settings", { ...draft, updatedAt: new Date().toISOString() });
+  }
+  function openDeviceMenu(id?: string) {
+    if (id) setOutputId(id);
+    setDeviceMenuOpen(true); deviceDialog.current?.showModal();
   }
   function addOutput(event: FormEvent) {
     event.preventDefault(); if (!draft || !newName.trim()) return;
@@ -194,21 +195,16 @@ function App() {
   }
 
   return <main className="controller equipment-controller">
-    <AppHeader product="Controller"><div className="equipment-shelf-wrapper"><div className="equipment-shelf" role="tablist" aria-label="出力設備">
-      {(draft?.devices ?? []).map(item => <button type="button" role="tab" aria-selected={item.id === outputId} aria-controls="equipment-customization" key={item.id}
+    <AppHeader product="Controller"><div className="equipment-shelf-wrapper"><div className="equipment-shelf" role="group" aria-label="デバイス">
+      {(draft?.devices ?? []).map(item => <button type="button" aria-pressed={item.id === outputId} aria-haspopup="dialog" aria-expanded={deviceMenuOpen && item.id === outputId} aria-controls="device-settings" key={item.id}
         className={`equipment-book ${item.type}${item.id === outputId ? " selected" : ""}${!item.enabled ? " stopped" : ""}`} disabled={busy}
-        onClick={() => setOutputId(item.id)}><span className="book-type">{item.type === "bell-switch" ? "BELL" : item.type.toUpperCase()}<i className={online ? "online" : "offline"} /></span><strong>{item.name}</strong></button>)}
-      <button className="equipment-add" type="button" aria-label="設備を追加" disabled={!canEdit} onClick={() => addDialog.current?.showModal()}>＋</button>
+        onClick={() => openDeviceMenu(item.id)}><span className="book-type">{item.type === "bell-switch" ? "BELL" : item.type.toUpperCase()}<i className={online ? "online" : "offline"} /></span><strong>{item.name}</strong><small>デバイス設定 ▾</small></button>)}
+      {!draft?.devices.length && <button type="button" className="equipment-book selected" aria-haspopup="dialog" aria-expanded={deviceMenuOpen} aria-controls="device-settings" disabled={busy} onClick={() => openDeviceMenu()}><span className="book-type">SIGNAGE</span><strong>端末を選択</strong><small>デバイス設定 ▾</small></button>}
+      <button className="equipment-add" type="button" aria-label="デバイスを追加" disabled={!canEdit} onClick={() => addDialog.current?.showModal()}>＋</button>
     </div></div></AppHeader>
     <section className="page equipment-page">
-      <div className="cloud-toolbar"><label>操作するSignage <select aria-label="操作するSignage" value={activeId} disabled={busy} onChange={event => select(event.target.value)}>
-        {!devices.length && <option value="">登録済みの端末がありません</option>}{devices.map(device => <option key={device.id} value={device.id}>{device.settings.facilityName || device.name} · {device.id.slice(0, 8)}</option>)}
-      </select></label><button type="button" disabled={busy} onClick={() => void refresh()}>Supabaseから再読込</button>
-        <a className="preview-link" href={appUrl("signage")} target="_blank" rel="noreferrer">Signageを開く ↗</a></div>
       {error && <p className="feedback error" role="alert">{error}</p>}
       {active ? <>
-        <div className="cloud-sync"><strong className={online && connected ? "online" : "offline"}>● {online && connected ? active.display_enabled ? "Signage表示中" : "Signage停止中" : "Signageの接続を待っています"}</strong>
-          <span>確定リビジョン {active.revision}</span><span>{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "まだ画面の応答がありません"}</span></div>
         <LivePreview key={activeId} channel={channel} online={online && connected} />
         <div className="cloud-toolbar">
           <button type="button" disabled={!canEdit || dirty} onClick={() => void operate("display", { enabled: !active.display_enabled })}>{active.display_enabled ? "表示を停止" : "表示を再開"}</button>
@@ -217,10 +213,9 @@ function App() {
         </div>
         <p className="feedback" role="status">{busy ? "描画・記録の完了を待っています…" : note}</p>
         {conflict && <p className="feedback error" role="alert">他のControllerが更新しました。編集中の設定は保持しています。Supabaseから再読込して変更をやり直してください。</p>}
-        {output && draft && config ? <section id="equipment-customization" role="tabpanel" aria-label={`${output.name}の設定`}>
+        {output && draft && config ? <section id="equipment-customization" aria-label={`${output.name}の設定`}>
           <div className="customize-heading"><div><p className="eyebrow">{typeName[output.type]} · {active.id.slice(0, 8)}</p><h1 className="page-title"><i />{output.name}</h1></div></div>
           <form onSubmit={save}><fieldset disabled={!canEdit || conflict}>
-            <label className="equipment-name-field">設備名<input value={output.name} maxLength={80} required onChange={event => edit({ ...draft, devices: draft.devices.map(item => item.id === output.id ? { ...item, name: event.target.value } : item) })} /></label>
             <p className="control-help">{catalogNote}</p><p className="control-help">{odptNote}</p>
             <RouteEditor key={`${activeId}|${output.id}`} settings={config} lines={lines} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, settings))} />
             <div className="section-heading"><b>施設・案内文</b><i /></div>
@@ -228,13 +223,29 @@ function App() {
             <label className="ticker-editor">画面下部のスクロール文面<textarea rows={4} maxLength={2000} value={config.tickerText} onChange={event => edit(withOutputSettings(draft, output.id, { ...config, tickerText: event.target.value }))} placeholder="例：足元にご注意ください。" /><small>{config.tickerText.length} / 2000文字</small></label>
             <div className="actions"><span>{dirty ? "未保存の変更があります" : "Supabaseの確定済み設定"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>Signageに反映して記録</button></div>
           </fieldset></form>
-        </section> : <p>この端末に設備を追加してください。</p>}
-        <details className="cloud-history"><summary>Signageで反映・記録した操作履歴</summary><ol>{events.map(event => <li key={event.id}>{time(event.applied_at)} · {actionName[event.action] ?? event.action} · リビジョン {event.revision}</li>)}</ol>{!events.length && <p>操作履歴はまだありません。</p>}</details>
-      </> : <div className="equipment-empty"><h1>Signageを開いてください</h1><p>Signageで同じ運用アカウントにログインすると、ここに端末が表示されます。</p></div>}
+        </section> : <p>この端末にデバイスを追加してください。</p>}
+      </> : <div className="equipment-empty"><h1>Signageを開いてください</h1><p>Signageで同じアカウントにログインすると、ここに端末が表示されます。</p><a className="open-signage" href={appUrl("signage")} target="_blank" rel="noreferrer">Signageを開く ↗</a></div>}
     </section>
-    <dialog ref={addDialog} className="device-dialog equipment-dialog"><div className="dialog-head"><h2>この端末に設備を追加</h2><button type="button" aria-label="閉じる" onClick={() => addDialog.current?.close()}>×</button></div>
-      <form className="add-equipment-form" onSubmit={addOutput}><fieldset disabled={!canEdit}><label>設備の種類<select value={newType} onChange={event => setNewType(event.target.value as DeviceType)}><option value="lcd">LCDサイネージ</option><option value="led">LED発車標</option><option value="bell-switch">操作デバイス</option></select></label>
-        <label>設備名<input value={newName} maxLength={80} required onChange={event => setNewName(event.target.value)} /></label><p className="control-help">追加後に設定を反映すると記録されます。各出力の表示はSignage URLに ?output=設備ID を付けて選択します。物理機器の駆動には別途機器側の対応が必要です。</p><button type="submit" disabled={!newName.trim()}>追加する</button></fieldset></form>
+    <dialog ref={deviceDialog} id="device-settings" className="device-dialog device-settings-dialog" aria-labelledby="device-settings-title" onClose={() => setDeviceMenuOpen(false)}>
+      <div className="dialog-head"><h2 id="device-settings-title">デバイス設定</h2><button type="button" aria-label="閉じる" onClick={() => deviceDialog.current?.close()}>×</button></div>
+      <label>操作するSignage<select aria-label="操作するSignage" value={activeId} disabled={busy} onChange={event => select(event.target.value)}>
+        {!devices.length && <option value="">登録済みの端末がありません</option>}{devices.map(device => <option key={device.id} value={device.id}>{device.settings.facilityName || device.name} · {device.id.slice(0, 8)}</option>)}
+      </select></label>
+      {active && <div className="cloud-sync"><strong className={online && connected ? "online" : "offline"}>● {online && connected ? active.display_enabled ? "Signage表示中" : "Signage停止中" : "Signageの接続を待っています"}</strong>
+        <span>{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "最終応答：まだ画面の応答がありません"}</span><span>確定リビジョン {active.revision}</span></div>}
+      {output && draft && <form onSubmit={save}><fieldset disabled={!canEdit || conflict}>
+        <label className="equipment-name-field">デバイス名<input value={output.name} maxLength={80} required onChange={event => edit({ ...draft, devices: draft.devices.map(item => item.id === output.id ? { ...item, name: event.target.value } : item) })} /></label>
+        <button type="submit" className="control-button primary" disabled={!dirty || !output.name.trim()}>変更を反映して記録</button>
+      </fieldset></form>}
+      {note && <p className="feedback">{note}</p>}
+      {error && <p className="feedback error">{error}</p>}
+      {conflict && <p className="feedback error">他のControllerが更新しました。Supabaseから再読込して変更をやり直してください。</p>}
+      <div className="device-settings-footer"><button type="button" className="control-button" disabled={!active || busy} onClick={() => void refresh()}>Supabaseから再読込</button>
+        <a className="preview-link" href={appUrl("signage")} target="_blank" rel="noreferrer">Signageを開く ↗</a></div>
+    </dialog>
+    <dialog ref={addDialog} className="device-dialog equipment-dialog" aria-labelledby="add-device-title"><div className="dialog-head"><h2 id="add-device-title">デバイスを追加</h2><button type="button" aria-label="閉じる" onClick={() => addDialog.current?.close()}>×</button></div>
+      <form className="add-equipment-form" onSubmit={addOutput}><fieldset disabled={!canEdit}><label>デバイスの種類<select value={newType} onChange={event => setNewType(event.target.value as DeviceType)}><option value="lcd">LCDサイネージ</option><option value="led">LED発車標</option><option value="bell-switch">操作デバイス</option></select></label>
+        <label>デバイス名<input value={newName} maxLength={80} required onChange={event => setNewName(event.target.value)} /></label><p className="control-help">追加後に「Signageに反映して記録」を押すと、デバイスの設定が保存されます。</p><button type="submit" className="control-button primary" disabled={!newName.trim()}>追加する</button></fieldset></form>
     </dialog>
   </main>;
 }

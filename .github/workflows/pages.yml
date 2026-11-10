@@ -34,6 +34,8 @@ jobs:
           PAGES_BASE: ${{ steps.pages.outputs.base_path }}/
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_ODPT_API_TOKEN: ${{ vars.VITE_ODPT_API_TOKEN }}
+          VITE_GTFS_URLS: ${{ vars.VITE_GTFS_URLS }}
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
