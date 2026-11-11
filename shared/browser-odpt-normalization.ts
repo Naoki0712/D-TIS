@@ -1,4 +1,5 @@
 import { cachedDestinationCode, externalStationCode } from "./browser-external-station-codes";
+import { locationFrom, type GeoPoint } from "./travel-time";
 
 /** ODPT v4 JSON-LD is normalized here so every operator uses the same board. */
 export type Raw = Record<string, any>;
@@ -18,6 +19,7 @@ export type Timetable = {
 };
 export type CatalogStation = {
   id: string; name: string; code?: string; directions: string[]; directionNames?: Record<string, string>;
+  location?: GeoPoint;
 };
 export type CatalogLine = {
   id: string; name: string; englishName?: string; lineCode?: string; mode?: "rail" | "bus";
@@ -174,14 +176,16 @@ export function normalizeRailway(
     const stationDirections = [...new Set(stationTables.map((table) => table.direction).filter(Boolean))];
     const directionNames = Object.fromEntries(stationDirections.map((direction) => [direction, directionTitle(direction, railway)]));
     Object.assign(line.directionNames!, directionNames);
-    line.stations.push({ id: sid, name: stationName(sid), code: stationCode(sid), directions: stationDirections, directionNames });
+    line.stations.push({ id: sid, name: stationName(sid), code: stationCode(sid), directions: stationDirections, directionNames,
+      location: locationFrom(row["geo:lat"], row["geo:long"]) });
   }
   for (const line of lines.values()) line.stations.sort((a, b) => (a.code ?? "").localeCompare(b.code ?? "", "en", { numeric: true }) || a.name.localeCompare(b.name, "ja"));
   return { timetables, lines: [...lines.values()], frequencySeconds: Math.max(60, Math.min(86400, ...tables.map((row) => Number(row["odpt:frequency"]) || 86400))) };
 }
 
-export function normalizeBusCatalog(patterns: Raw[]): CatalogLine[] {
+export function normalizeBusCatalog(patterns: Raw[], poles: Raw[] = []): CatalogLine[] {
   const lines = new Map<string, CatalogLine>();
+  const poleRows = new Map(poles.map(row => [id(row), row]));
   for (const pattern of patterns) {
     const railway = pattern["odpt:busroute"], direction = id(pattern);
     const order = list(pattern["odpt:busstopPoleOrder"]).slice().sort((a, b) => Number(a["odpt:index"]) - Number(b["odpt:index"]));
@@ -198,7 +202,9 @@ export function normalizeBusCatalog(patterns: Raw[]): CatalogLine[] {
       let station = line.stations.find((item) => item.id === sid);
       if (!station) {
         const pole = sid.split(".").at(-1);
-        station = { id: sid, name: `${title(stop["odpt:note"], short(sid))}${pole ? `（${pole}番のりば）` : ""}`, directions: [], directionNames: {} };
+        const position = poleRows.get(sid) ?? stop;
+        station = { id: sid, name: `${title(stop["odpt:note"], short(sid))}${pole ? `（${pole}番のりば）` : ""}`, directions: [], directionNames: {},
+          location: locationFrom(position["geo:lat"], position["geo:long"]) };
         line.stations.push(station);
       }
       if (!station.directions.includes(direction)) station.directions.push(direction);
@@ -304,11 +310,13 @@ export async function refreshOdpt(previous: Cache | null, selections: Selection[
   const auxiliary = await Promise.allSettled([
     fetchResource("odpt:RailDirection"), fetchResource("odpt:Calendar"), fetchResource("odpt:Station"),
     fetchResource("odpt:BusroutePattern", { "odpt:operator": "odpt.Operator:Toei" }),
+    fetchResource("odpt:BusstopPole", { "odpt:operator": "odpt.Operator:Toei" }),
   ]);
   const directions = auxiliary[0].status === "fulfilled" ? auxiliary[0].value : [];
   const calendars = auxiliary[1].status === "fulfilled" ? auxiliary[1].value : [];
   const allStations = auxiliary[2].status === "fulfilled" ? auxiliary[2].value : [];
   const patterns = auxiliary[3].status === "fulfilled" ? auxiliary[3].value : null;
+  const poles = auxiliary[4].status === "fulfilled" ? auxiliary[4].value : [];
   const tableResults = await settledMap(railways, async (railway) => ({ railway: id(railway), tables: await fetchResource("odpt:StationTimetable", { "odpt:railway": id(railway) }) }));
   const tables: Raw[] = [], failedRailways = new Set<string>();
   for (let i = 0; i < tableResults.length; i++) {
@@ -331,7 +339,7 @@ export async function refreshOdpt(previous: Cache | null, selections: Selection[
   const normalized = normalizeRailway(tables, stations, allStations, railways, directions, calendars);
   const preserve = (railway: string) => failedRailways.has(railway) || preservedOperators.has(railway.split(":").at(-1)?.split(".")[0] ?? "");
   const previousLines = (previous?.lines ?? []).filter((line) => preserve(line.id));
-  const busLines = patterns ? normalizeBusCatalog(patterns) : (previous?.lines ?? []).filter((line) => line.mode === "bus" || line.id.startsWith("odpt.Busroute:"));
+  const busLines = patterns ? normalizeBusCatalog(patterns, poles) : (previous?.lines ?? []).filter((line) => line.mode === "bus" || line.id.startsWith("odpt.Busroute:"));
   if (!patterns) warnings.push("都営バス: 系統情報を取得できませんでした。");
   const cached: Cache = {
     fetchedAt: new Date().toISOString(), source: "live", frequencySeconds: normalized.frequencySeconds,

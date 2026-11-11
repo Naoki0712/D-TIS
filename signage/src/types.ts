@@ -1,5 +1,5 @@
-import type { OutputDevice, SelectedRoute } from "../../shared/display-settings";
-export interface Facility {
+import type { DisplaySettings, OutputDevice, SelectedRoute } from "../../shared/display-settings";
+export interface Facility extends Partial<DisplaySettings> {
   facilityName: string;
   directionDisplayMode?: "separate" | "combined";
   selectedRoutes: SelectedRoute[];

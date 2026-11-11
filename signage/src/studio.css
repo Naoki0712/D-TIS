@@ -1,0 +1,27 @@
+.signage-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.signage-content.with-media { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; }
+.signage-content.media-only { display: flex; }
+.signage-content.media-only .departure-pages,.signage-content.media-only > .odpt-empty { display: none; }
+.signage-content > .departure-pages { min-width: 0; }
+.signage-media { min-width: 0; min-height: 160px; display: grid; place-items: center; overflow: hidden; background: #111; }
+.signage-media[hidden] { display: none; }
+.signage-media img,.signage-media video { display: block; width: 100%; height: 100%; max-height: calc(100svh - 160px); object-fit: contain; }
+.travel-estimate { margin: 8px 22px; font-size: clamp(14px,1.3vw,20px); color: #d4d4d4; }
+.departure-list[data-transition] > article { animation-duration: .65s; animation-timing-function: ease-out; backface-visibility: hidden; }
+.departure-list[data-transition="slide"] > article { animation-name: departure-slide; }
+.departure-list[data-transition="fade"] > article { animation-name: departure-fade; }
+.departure-list[data-transition="flip"] > article { animation-name: departure-flip; transform-origin: center; }
+.departure-list[data-transition="split-flap"] > article > * { animation: departure-flap .7s steps(8,end); transform-origin: center; }
+.departure-list[data-transition="zoom"] > article { animation-name: departure-zoom; }
+@keyframes departure-slide { from { opacity: 0; transform: translateY(50%); } to { opacity:1; transform:none; } }
+@keyframes departure-fade { from { opacity:0; } to { opacity:1; } }
+@keyframes departure-flip { from { opacity:0; transform: perspective(700px) rotateX(-90deg); } to { opacity:1; transform: perspective(700px) rotateX(0); } }
+@keyframes departure-flap { 0% { transform: perspective(500px) rotateX(-90deg); filter: brightness(.3); } 50% { transform: perspective(500px) rotateX(18deg); filter: brightness(1.3); } 100% { transform: none; filter:none; } }
+@keyframes departure-zoom { from { opacity:0; transform:scale(.85); } to { opacity:1; transform:scale(1); } }
+.rich-ticker { position: relative; flex: none; width: 100%; overflow: hidden; }
+.rich-ticker-track { display: inline-block; width: max-content; white-space: nowrap; will-change: transform; padding: 14px 0; }
+.rich-ticker-track > span { display: inline-block; position: relative; white-space: pre; }
+.ticker-blink { animation: ticker-blink 1.2s step-end infinite; }
+@keyframes ticker-blink { 50% { opacity:.15; } }
+@media(max-width:800px){.signage-content.with-media{grid-template-columns:1fr}.signage-media{max-height:30svh}}
+@media(prefers-reduced-motion:reduce){.departure-list[data-transition] > article,.departure-list[data-transition] > article > *,.ticker-blink{animation:none!important}.rich-ticker-track{width:auto;white-space:normal;transform:none!important}.rich-ticker-track > span{white-space:pre-wrap}}

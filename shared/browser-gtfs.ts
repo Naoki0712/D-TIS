@@ -1,5 +1,6 @@
 import { strFromU8, unzipSync } from "fflate";
 import type { Cache, CatalogLine, Timetable } from "./browser-odpt-normalization";
+import { locationFrom } from "./travel-time";
 
 type Row = Record<string, string>;
 export type GtfsFiles = Record<string, string>;
@@ -117,7 +118,7 @@ export function normalizeGtfs(files: GtfsFiles, feedUrl: string): Pick<Cache, "l
       if (!stop || time.pickup_type === "1") continue;
       const station = sid(time.stop_id);
       let choice = line.stations.find(row => row.id === station);
-      if (!choice) { choice = { id: station, name: stop.stop_name || time.stop_id, code: stop.stop_code || "", directions: [], directionNames: {} }; line.stations.push(choice); }
+      if (!choice) { choice = { id: station, name: stop.stop_name || time.stop_id, code: stop.stop_code || "", directions: [], directionNames: {}, location: locationFrom(stop.stop_lat, stop.stop_lon) }; line.stations.push(choice); }
       if (!choice.directions.includes(direction)) choice.directions.push(direction);
       choice.directionNames![direction] = destination;
       const key = `${railway}|${station}|${direction}|${trip.service_id}`;

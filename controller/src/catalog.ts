@@ -1,4 +1,4 @@
-export type CatalogStation = { id: string; name: string; code?: string; directions: string[]; directionNames?: Record<string, string> };
+export type CatalogStation = { id: string; name: string; code?: string; directions: string[]; directionNames?: Record<string, string>; location?: { latitude: number; longitude: number } };
 export type CatalogLine = { id: string; name: string; stations: CatalogStation[]; mode?: "rail" | "bus"; lineCode?: string; directionNames?: Record<string, string>; supportsCarCount?: boolean };
 export type StationChoice = { name: string; matches: { line: CatalogLine; station: CatalogStation }[] };
 const searchable = (value: string) => value.normalize("NFKC").toLocaleLowerCase().replace(/\s/g, "");

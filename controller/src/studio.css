@@ -1,0 +1,43 @@
+.equipment-controller .app-header { min-height: var(--header-height); flex-wrap: nowrap; }
+.equipment-controller .feedback { color: #e5e5e5; }
+.equipment-controller .feedback.error { color: #ffb8b8; }
+.equipment-controller .eyebrow,.equipment-controller .preview-link,.equipment-controller .route-fields legend { color: #ddd; }
+.equipment-controller .muted { font-size: 16px; }
+.equipment-page { padding-bottom: 100px; }
+.studio-settings-button { margin: 0 24px 0 auto; padding: 12px 18px; border: 1px solid #888; border-radius: 6px; background: #252525; color: white; font-size: 17px; white-space: nowrap; }
+.equipment-page { max-width: 1320px; margin-inline: auto; }
+.fleet-section { border-bottom: 1px solid #777; padding-bottom: 30px; margin-bottom: 36px; }
+.fleet-section h1 { font-size: 32px; margin: 0; }
+.fleet-section h1::before,.studio-section h2::before { content: "■"; font-size: .7em; margin-right: 12px; }
+.fleet-section .section-heading button,.studio-buttons button,.content-editor button { padding: 12px 18px; background: #292929; color: #fff; border: 1px solid #888; border-radius: 6px; min-height: 44px; font-size: 17px; }
+.fleet-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(220px,1fr)); gap: 12px; }
+.fleet-list button { text-align: left; color: #fff; background: #262626; border: 1px solid #666; border-radius: 6px; padding: 18px; min-width: 0; }
+.fleet-list button.selected { background: #f2f2f2; color: #161616; border: 2px solid #fff; }
+.fleet-list strong,.fleet-list small { display: block; overflow-wrap: anywhere; }
+.fleet-list strong { font-size: 20px; }.fleet-list small { font-size: 14px; margin-top: 8px; }
+.connection-notices { margin-top: 20px; border: 1px solid #696969; padding: 16px; }.connection-notices li { margin-bottom: 8px; font-size: 16px; }
+.studio-section { margin-top: 44px; border-top: 1px solid #666; padding-top: 28px; }
+.studio-section h2 { font-size: 26px; margin: 0 0 24px; }
+.studio-section label { max-width: 100%; margin: 20px 0; }
+.studio-section input,.studio-section textarea,.studio-section select { width: 100%; }
+.studio-section textarea { resize: vertical; min-height: 120px; }
+.studio-section input[type=file] { padding: 16px; font-size: 16px; border: 1px dashed #888; }
+.studio-section input[type=color] { max-width: 140px; padding: 4px; }
+.studio-section input[type=range] { padding-inline: 0; }
+.studio-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+.studio-check { display: flex!important; flex-direction: row!important; align-items: center; gap: 12px; }
+.studio-check input { width: 24px; height: 24px; }
+.studio-section details { padding: 18px; border: 1px solid #666; margin: 20px 0; }
+.studio-section summary { cursor: pointer; font-size: 18px; }
+.studio-buttons { display: flex; flex-wrap: wrap; gap: 12px; margin: 20px 0; }
+.font-sample,.ticker-edit-preview { border: 1px solid #666; padding: 24px; font-size: 24px; margin: 20px 0; overflow-wrap: anywhere; }
+.ticker-edit-preview { white-space: pre-wrap; }.ticker-edit-preview small { font-size: 14px; color: #bbb; }
+.media-items { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 16px; }
+.media-items article { padding: 20px; border: 1px solid #666; min-width: 0; }
+.media-items h3 { margin: 0; font-size: 20px; }
+.device-settings-dialog { width: min(1080px,calc(100vw - 40px)); max-width: none; max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; }
+.device-settings-dialog .cloud-preview-stage { max-height: 48dvh; }.device-settings-dialog .cloud-preview-stage img,.device-settings-dialog .cloud-preview-stage video { max-height: 48dvh; }
+.device-settings-footer > label { width: 100%; }.device-settings-footer input { width: 100%; font-size: 16px; }
+.ticker-blink { animation: studio-blink 1.2s step-end infinite; }@keyframes studio-blink {50%{opacity:.15}}
+@media(max-width:720px){.studio-settings-button{font-size:14px;padding:10px;margin-right:12px}.equipment-controller .app-header{gap:0}.studio-grid{grid-template-columns:1fr;gap:0}.studio-section h2{font-size:23px}.device-settings-dialog{width:calc(100vw - 24px);max-height:calc(100dvh - 24px);padding:20px}.fleet-list{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}.fleet-section .section-heading{gap:16px}.media-items{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.ticker-blink{animation:none}}

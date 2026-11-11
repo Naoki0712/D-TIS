@@ -40,7 +40,7 @@ export function RouteEditor({ settings, lines, disabled, onChange }: {
     const key = `${selected.line.id}|${selected.station.id}`;
     if (!settings.selectedRoutes.some(route => routeGroupKey(route) === key)) {
       onChange({ ...settings, selectedRoutes: [...settings.selectedRoutes,
-        ...selected.station.directions.map(direction => ({ railway: selected.line.id, station: selected.station.id, direction }))] });
+        ...selected.station.directions.map(direction => ({ railway: selected.line.id, station: selected.station.id, direction, stationLocation: selected.station.location }))] });
     }
     addDialog.current?.close();
   }
@@ -52,7 +52,7 @@ export function RouteEditor({ settings, lines, disabled, onChange }: {
     for (const route of settings.selectedRoutes) {
       if (routeGroupKey(route) !== key) routes.push(route);
       else if (!inserted) {
-        routes.push(...directions.map(direction => ({ railway: editing.railway, station: editing.station, direction, display: options })));
+        routes.push(...directions.map(direction => ({ railway: editing.railway, station: editing.station, direction, stationLocation: editStation?.location ?? editing.stationLocation, display: options })));
         inserted = true;
       }
     }

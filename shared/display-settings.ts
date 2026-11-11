@@ -1,5 +1,17 @@
 export type DirectionDisplayMode = "separate" | "combined";
 export type DeviceType = "lcd" | "led" | "bell-switch";
+export type TransitionStyle = "none" | "slide" | "fade" | "flip" | "split-flap" | "zoom";
+export type FontPreset = "gothic" | "mincho" | "custom";
+export interface CustomFont { family: string; url: string; format: "woff2" | "woff" | "truetype" | "opentype" }
+export interface AppearanceSettings { preset: FontPreset; customFont?: CustomFont }
+export interface GeoPoint { latitude: number; longitude: number }
+export interface TravelSettings {
+  mode: "off" | "manual" | "gps"; minutes: number;
+  latitude?: number; longitude?: number; walkingSpeedKmh?: number; bufferMinutes?: number;
+}
+export interface MediaItem { id: string; kind: "image" | "video"; url: string; alt: string; durationSeconds: number }
+export interface TickerSegment { id: string; text: string; color?: string; weight?: 400 | 700; font?: FontPreset; blink?: boolean; pauseSeconds?: number }
+export interface TickerSettings { speed: number; segments: TickerSegment[] }
 
 export interface RouteDisplaySettings {
   directionDisplayMode?: DirectionDisplayMode;
@@ -14,6 +26,7 @@ export interface SelectedRoute {
   station: string;
   direction: string;
   display?: RouteDisplaySettings;
+  stationLocation?: GeoPoint;
 }
 
 export interface DisplaySettings {
@@ -21,6 +34,12 @@ export interface DisplaySettings {
   directionDisplayMode: DirectionDisplayMode;
   selectedRoutes: SelectedRoute[];
   tickerText: string;
+  appearance?: AppearanceSettings;
+  transition?: TransitionStyle;
+  travel?: TravelSettings;
+  media?: MediaItem[];
+  mediaLayout?: "alongside" | "alternating";
+  ticker?: TickerSettings;
 }
 
 export interface OutputDevice {
@@ -53,6 +72,12 @@ export function effectiveDisplaySettings(facility: FacilityInput, outputId?: str
     directionDisplayMode: settings?.directionDisplayMode ?? facility.directionDisplayMode ?? "separate",
     selectedRoutes: settings?.selectedRoutes ?? facility.selectedRoutes ?? [],
     tickerText: settings?.tickerText ?? facility.tickerText ?? "",
+    appearance: settings ? settings.appearance : facility.appearance,
+    transition: settings ? settings.transition : facility.transition,
+    travel: settings ? settings.travel : facility.travel,
+    media: settings ? settings.media : facility.media,
+    mediaLayout: settings ? settings.mediaLayout : facility.mediaLayout,
+    ticker: settings ? settings.ticker : facility.ticker,
   };
 }
 

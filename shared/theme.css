@@ -1,5 +1,5 @@
 :root {
-  --latin-font: Helvetica, Inter, "BIZ UDPGothic", sans-serif;
+  --latin-font: Inter, Helvetica, "BIZ UDPGothic", sans-serif;
   --text-ja-large: clamp(28px, 3.6vw, 52px);
   --text-ja-small: clamp(20px, 2.4vw, 34px);
   --text-secondary: clamp(16px, 1.6vw, 23px);
@@ -9,7 +9,7 @@
   --surface: #1d1d1d;
   --line-color: #8f74df;
 }
-html.windows { --latin-font: Inter, "BIZ UDPGothic", sans-serif; }
+html.windows { --latin-font: Inter, Helvetica, "BIZ UDPGothic", sans-serif; }
 * { box-sizing: border-box; }
 body { margin: 0; color: #fff; background: var(--surface); font-family: var(--latin-font); font-weight: 700; font-size: var(--text-secondary); }
 button, input, select, textarea { font: inherit; }

@@ -11,6 +11,8 @@ export type DeviceRecord = {
   id: string; owner_id: string; name: string; settings: FacilitySettings;
   display_enabled: boolean; revision: number; refresh_version: number;
   last_seen_at: string | null; updated_at: string;
+  last_connected_at?: string | null;
+  last_connection_kind?: "new" | "existing" | null;
 };
 export type DeviceEvent = {
   id: string; device_id: string; command_id: string; action: string;
@@ -67,7 +69,11 @@ export function getCloudClient(): SupabaseClient {
   if (!client || signature !== clientConfig) {
     if (client) { void client.removeAllChannels(); client.auth.stopAutoRefresh(); }
     clientConfig = signature;
-    client = createClient(config.url, config.key, { global: { fetch: boundedCloudFetch },
+    client = createClient(config.url, config.key, { global: { fetch: (input, init) => {
+      const url = new URL(typeof input === "string" ? input : input instanceof URL ? input.href : input.url);
+      const uploading = url.pathname.startsWith("/storage/v1/object/") && init?.method?.toUpperCase() === "POST";
+      return boundedCloudFetch(input, init, uploading ? 180_000 : 12_000);
+    } },
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   }
   return client;
@@ -92,9 +98,19 @@ export function parseDeviceRecord(value: unknown): DeviceRecord {
 }
 
 export async function listDevices(): Promise<DeviceRecord[]> {
-  const { data, error } = await getCloudClient().from("dtis_devices").select("*").order("name");
-  if (error) throw failure(error);
-  return (data ?? []).map(parseDeviceRecord);
+  // PostgREST limits each response. Keep a stable order and page through every
+  // record instead of silently losing Signages after the first server page.
+  const rows = new Map<string, DeviceRecord>();
+  const pageSize = 500;
+  for (let offset = 0; ;) {
+    const { data, error, count } = await getCloudClient().from("dtis_devices")
+      .select("*", { count: "exact" }).order("id").range(offset, offset + pageSize - 1);
+    if (error) throw failure(error);
+    for (const raw of data ?? []) { const record = parseDeviceRecord(raw); rows.set(record.id, record); }
+    if (!data?.length || count !== null && offset + data.length >= count || count === null && data.length < pageSize) break;
+    offset += data.length;
+  }
+  return [...rows.values()];
 }
 
 export async function getDevice(id: string): Promise<DeviceRecord> {
@@ -103,7 +119,7 @@ export async function getDevice(id: string): Promise<DeviceRecord> {
   return parseDeviceRecord(data);
 }
 
-export async function registerDevice(id: string, name: string): Promise<DeviceRecord> {
+export async function registerDevice(id: string, name: string, outputName = "メイン画面"): Promise<DeviceRecord> {
   const supabase = getCloudClient();
   const { data: existing, error: lookupError } = await supabase.from("dtis_devices").select("*").eq("id", id).maybeSingle();
   if (lookupError) throw failure(lookupError);
@@ -113,7 +129,7 @@ export async function registerDevice(id: string, name: string): Promise<DeviceRe
   if (!user) throw new Error("運用アカウントでログインしてください。");
   const settings: FacilitySettings = { facilityName: name.trim() || "D-TIS", directionDisplayMode: "separate",
     selectedRoutes: [], tickerText: "", updatedAt: new Date().toISOString(),
-    devices: [{ id: "primary", code: "LCD-01", name: "メイン画面", type: "lcd", enabled: true }] };
+    devices: [{ id: "primary", code: "LCD-01", name: outputName.trim().slice(0, 200) || "メイン画面", type: "lcd", enabled: true }] };
   const { data, error } = await supabase.from("dtis_devices").insert({ id, owner_id: user.id, name: name.trim().slice(0, 200) || "D-TIS Signage", settings }).select("*").single();
   if (error?.code === "23505") return getDevice(id);
   if (error) throw failure(error);
@@ -123,6 +139,15 @@ export async function registerDevice(id: string, name: string): Promise<DeviceRe
 export async function heartbeatDevice(id: string): Promise<void> {
   const { error } = await getCloudClient().rpc("dtis_heartbeat", { p_device_id: id });
   if (error) throw failure(error);
+}
+
+/** Record a real Signage login separately from regular presence heartbeats. */
+export async function announceDeviceConnection(id: string): Promise<DeviceRecord | null> {
+  const { data, error } = await getCloudClient().rpc("dtis_connect", { p_device_id: id });
+  // Existing installations keep working while the additive SQL upgrade is applied.
+  if (error && ["PGRST202", "42883", "42703"].includes(error.code ?? "")) return null;
+  if (error) throw failure(error);
+  return parseDeviceRecord(data);
 }
 
 export async function listDeviceEvents(id: string, limit = 20): Promise<DeviceEvent[]> {

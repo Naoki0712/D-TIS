@@ -8,6 +8,11 @@ import { trainTypeColor } from "./train-types";
 import { routeDisplaySettings, type DirectionDisplayMode } from "../../shared/display-settings";
 import type { Facility, Timetable } from "./types";
 import { SignageSharing } from "../../shared/live-preview";
+import { useDisplayFont } from "../../shared/fonts";
+import { estimateTravelMinutes } from "../../shared/travel-time";
+import type { TravelSettings, TransitionStyle } from "../../shared/display-settings";
+import { RichTicker } from "./RichTicker";
+import { MediaDisplay } from "./MediaDisplay";
 
 const readings: Record<string, string> = {
   半蔵門線: "とうきょうめとろ はんぞうもんせん",
@@ -39,14 +44,15 @@ const typeReadings: Record<string, string> = {
   快速: "かいそく", 快速急行: "かいそくきゅうこう", 通勤快速: "つうきんかいそく", 通勤急行: "つうきんきゅうこう",
 };
 
-function DepartureBoard({ selected, tables, now, showEnglish, fallbackMode }: {
-  selected: Facility["selectedRoutes"][number]; tables: Timetable[]; now: Date; showEnglish: boolean; fallbackMode?: DirectionDisplayMode;
+function DepartureBoard({ selected, tables, now, showEnglish, fallbackMode, travel, transition }: {
+  selected: Facility["selectedRoutes"][number]; tables: Timetable[]; now: Date; showEnglish: boolean; fallbackMode?: DirectionDisplayMode; travel?: TravelSettings; transition?: TransitionStyle;
 }) {
   const options = routeDisplaySettings(selected, fallbackMode);
   const timetable = timetableFor(selected, tables, now);
   const route = timetable ?? tables.find(table => table.railway === selected.railway
     && table.station === selected.station && table.direction === selected.direction);
-  const departures = nextDepartures(timetable, now);
+  const estimate = estimateTravelMinutes(travel, selected.stationLocation);
+  const departures = nextDepartures(timetable, now, estimate.minutes);
   const bus = route?.mode === "bus" || selected.railway.startsWith("odpt.Busroute:");
   const name = railwayName(selected.railway, route?.railwayName ?? shortId(selected.railway));
   const direction = directionName(selected.direction, route?.directionName ?? shortId(selected.direction));
@@ -62,7 +68,8 @@ function DepartureBoard({ selected, tables, now, showEnglish, fallbackMode }: {
           : `${readings[route?.directionName ?? direction]}${bus ? "ゆき" : "ほうめん"}`}
       </p></div>}
     </div>
-    <div className="departure-list">{departures.length ? departures.map((departure, index) => {
+    {travel && travel.mode !== "off" && <p className="travel-estimate">{estimate.estimated ? "徒歩の目安" : "移動・余裕時間"} {estimate.minutes}分を含めて乗れる便{estimate.missingLocation ? "（位置情報なし・手動時間のみ）" : ""}</p>}
+    <div className="departure-list" data-transition={transition ?? "fade"}>{departures.length ? departures.map((departure, index) => {
       const destinationIcon = departure.destinationCodes[0] ? stationAsset(departure.destinationCodes[0]) : "";
       const serviceColumn = options.showTrainType || options.showCarCount && departures.some(item => item.carCount);
       return <article key={`${departure.time}-${departure.trainNumber}-${index}`} className={!serviceColumn ? "without-train-type" : ""}>
@@ -79,7 +86,7 @@ function DepartureBoard({ selected, tables, now, showEnglish, fallbackMode }: {
           <strong>{departure.destination}</strong><span>{secondary(departure.destination, departure.destinationEnglish)}</span>
         </div>
       </article>;
-    }) : <div className="no-service">{timetable ? `本日の${bus ? "バス" : "列車"}の運行は終了しました` : "本日の時刻表がありません"}</div>}</div>
+    }) : <div className="no-service">{timetable ? estimate.minutes > 0 ? "移動時間を含めて乗れる便がありません" : `本日の${bus ? "バス" : "列車"}の運行は終了しました` : "本日の時刻表がありません"}</div>}</div>
   </section>;
 }
 
@@ -105,9 +112,13 @@ export function Signage() {
   const showEnglish = rotationTick % 2 === 1;
   const displayPaused = state?.displayEnabled === false || selectedOutput?.enabled === false;
   const tickerText = facility?.tickerText?.trim().replace(/\r?\n/g, "　") ?? "";
+  const fontStyle = useDisplayFont(facility?.appearance);
+  const media = facility?.media ?? [];
+  const alternating = facility?.mediaLayout === "alternating";
+  const showMedia = media.length > 0 && (!alternating || rotationTick % 6 >= 3 || !facility?.selectedRoutes.length);
 
   return (
-    <><SignageSharing channel={channel} outputId={selectedOutput?.id} /><main className={`signage${displayPaused ? " signage-paused" : ""}${tickerText && !displayPaused ? " has-ticker" : ""}`}>
+    <><SignageSharing channel={channel} outputId={selectedOutput?.id} /><main style={fontStyle} data-font-preset={facility?.appearance?.preset ?? "gothic"} className={`signage${displayPaused ? " signage-paused" : ""}${tickerText && !displayPaused ? " has-ticker" : ""}`}>
       {!displayPaused && <AppHeader product="Signage" facilityName={facility?.facilityName}
         facilitySecondary={route && facility?.facilityName === `${route.stationName}駅`
           ? showEnglish ? `${route.stationEnglish} Station` : readings[route.stationName] ? `${readings[route.stationName]}えき` : `${route.stationEnglish} Station`
@@ -116,6 +127,7 @@ export function Signage() {
       </AppHeader>}
       {connectionError && <p className="signage-connection-error" role="status">{connectionError}</p>}
       {data?.stale && !connectionError && <p className="signage-connection-error" role="status">交通情報の更新に一部失敗したため、保存済みの時刻表を表示しています。{data.fetchedAt ? `最終取得: ${new Date(data.fetchedAt).toLocaleString("ja-JP")}` : ""}</p>}
+      <div className={`signage-content${showMedia && !displayPaused ? alternating || !facility?.selectedRoutes.length ? " media-only" : " with-media" : ""}`}>
       {displayPaused ? <section className="signage-pause-message" aria-label="表示停止中">
         <h1>表示を停止しています</h1>
         <p>Controllerから表示を再開できます。</p>
@@ -134,17 +146,15 @@ export function Signage() {
       ) : (
         <div className={`departure-pages${page.length > 1 ? " combined" : ""}`}>
           {page.map(selected => <DepartureBoard key={`${selected.railway}-${selected.station}-${selected.direction}`}
-            selected={selected} tables={data.timetables} now={now} showEnglish={showEnglish} fallbackMode={facility.directionDisplayMode} />)}
+            selected={selected} tables={data.timetables} now={now} showEnglish={showEnglish} fallbackMode={facility.directionDisplayMode} travel={facility.travel} transition={facility.transition} />)}
           {pages.length > 1 && <div className="page-indicator" aria-label="表示ページ">
             {Math.floor(rotationTick / 4) % pages.length + 1} / {pages.length}
           </div>}
         </div>
       )}
-      {tickerText && !displayPaused && !outputMissing && <footer className="signage-ticker" aria-label="お知らせ" tabIndex={0}>
-        <div className="ticker-track" key={tickerText} style={{ "--ticker-duration": `${Math.max(22, [...tickerText].length * .45)}s` } as CSSProperties}>
-          <span>{tickerText}</span><span aria-hidden="true">{tickerText}</span>
-        </div>
-      </footer>}
+      {!!media.length && !displayPaused && !outputMissing && <MediaDisplay media={media} visible={showMedia} />}
+      </div>
+      {!displayPaused && !outputMissing && <RichTicker text={tickerText} ticker={facility?.ticker} />}
     </main></>
   );
 }

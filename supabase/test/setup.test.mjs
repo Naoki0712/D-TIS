@@ -59,6 +59,25 @@ before(async () => {
 
 after(async () => { await db.close(); });
 
+test("login announcements distinguish new and existing screens without changing settings or revisions", async () => {
+  await asUser();
+  const id = crypto.randomUUID();
+  await db.query("insert into public.dtis_devices(id,owner_id,name,settings) values ($1,$2,'new screen',$3)", [id, owner, JSON.stringify(settings)]);
+  const first = (await db.query("select * from public.dtis_connect($1)", [id])).rows[0];
+  assert.equal(first.last_connection_kind, "new");
+  assert.ok(first.last_connected_at);
+  assert.equal(first.revision, 0);
+  const again = (await db.query("select * from public.dtis_connect($1)", [id])).rows[0];
+  assert.equal(again.last_connection_kind, "existing");
+  assert.deepEqual(again.settings, first.settings);
+  await asUser(other);
+  await assert.rejects(db.query("select * from public.dtis_connect($1)", [id]), /device_not_found/);
+  await asUser();
+  await db.exec("reset role");
+  await db.query("delete from public.dtis_devices where id=$1", [id]);
+  await asUser();
+});
+
 test("authenticated owner can register and read a device; another owner cannot read, modify, or claim it", async () => {
   await asUser();
   assert.equal((await state()).revision, 0);

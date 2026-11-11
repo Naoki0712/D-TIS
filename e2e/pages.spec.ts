@@ -34,7 +34,7 @@ test("all static entrypoints, stylesheet fonts, and shared images respect the Pa
   for (const app of ["", "signage/", "controller/"]) {
     const response = await request.get(`${baseURL}${app}`); expect(response.status()).toBe(200);
     const html = await response.text();
-    for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
+    for (const match of html.matchAll(/<(?:script|link|img)\b[^>]*?(?:src|href)="([^"]+)"/g)) {
       const url = new URL(match[1], response.url()).href;
       expect(url.startsWith(baseURL!)).toBe(true); assets.add(url);
     }
@@ -48,7 +48,8 @@ test("all static entrypoints, stylesheet fonts, and shared images respect the Pa
       const asset = new URL(match[1], url).href; expect(asset.startsWith(baseURL!)).toBe(true); fonts.add(asset);
     }
   }
-  for (const url of fonts) expect((await request.get(url)).status(), url).toBe(200);
+  const fontUrls = [...fonts];
+  for (let i = 0; i < fontUrls.length; i += 20) await Promise.all(fontUrls.slice(i, i + 20).map(async url => expect((await request.get(url)).status(), url).toBe(200)));
   expect(fonts.size).toBeGreaterThan(30);
   expect((await request.get(`${baseURL}not-a-route/`)).status()).toBe(404);
 });
@@ -98,6 +99,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
         await json(request.headers().accept?.includes("vnd.pgrst.object+json") ? record : [record]); return;
       }
       if (url.pathname === "/rest/v1/dtis_events") { await json(history); return; }
+      if (url.pathname === "/rest/v1/rpc/dtis_connect") { await json({ ...record, last_connected_at: new Date().toISOString(), last_connection_kind: "existing" }); return; }
       if (url.pathname === "/rest/v1/rpc/dtis_heartbeat") { record.last_seen_at = new Date().toISOString(); await json(null); return; }
       if (url.pathname === "/rest/v1/rpc/dtis_reconcile_applied") {
         const body = request.postDataJSON();
@@ -148,8 +150,10 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await expect(signage.locator(".app-facility")).toContainText("初期表示");
     await login(controller, `${baseURL}controller/`);
     await expect(controller.getByLabel("施設名", { exact: true })).toBeEnabled();
+    await controller.getByRole("button", { name: "デバイス設定" }).click();
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toBeVisible({ timeout: 20000 });
     expect(joins.length).toBeGreaterThanOrEqual(2); expect(joins.every(Boolean)).toBe(true);
+    await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     await controller.getByRole("button", { name: "＋ 路線を追加する" }).click();
     const routeDialog = controller.getByRole("dialog", { name: "路線を追加", exact: true });
     await expect(routeDialog.getByRole("combobox", { name: "乗り物", exact: true })).toHaveValue("rail");
@@ -173,6 +177,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     expect(commits[0].rendered).toContain("足元にご注意ください"); expect(controllerReadsAfterCommit).toBeGreaterThan(0);
     expect(history).toHaveLength(1);
 
+    await controller.getByRole("button", { name: "デバイス設定" }).click();
     await controller.getByRole("button", { name: "表示を停止", exact: true }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 2");
     await expect(signage.getByRole("heading", { name: "表示を停止しています" })).toBeVisible();
@@ -181,6 +186,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 3");
     await expect(signage.locator(".app-facility")).toContainText("描画後に記録する駅");
 
+    await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     rejectNextCommit = true;
     await controller.getByLabel("施設名", { exact: true }).fill("記録に失敗する変更");
     await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
@@ -190,16 +196,18 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     expect(commits[3].rendered).toContain("記録に失敗する変更");
 
     controller.on("dialog", dialog => dialog.accept());
-    await controller.getByRole("button", { name: /LCD メイン画面/ }).click();
+    await controller.getByRole("button", { name: "デバイス設定" }).click();
     await controller.getByRole("button", { name: "Supabaseから再読込" }).click();
     await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("描画後に記録する駅");
     await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     await controller.reload();
     await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("描画後に記録する駅");
+    await controller.getByRole("button", { name: "デバイス設定" }).click();
     await controller.getByRole("button", { name: "両画面の交通情報を更新" }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 4");
     expect(record.refresh_version).toBe(1); expect(history).toHaveLength(4);
     expect(commits[4]).toMatchObject({ source: "signage", action: "refresh", paused: false });
+    await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     // The database applied the operation but the HTTP response never arrived.
     // Signage must reconcile the exact command rather than restore stale state.
     loseNextCommitResponse = true;
@@ -209,6 +217,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await expect(signage.locator(".app-facility")).toContainText("応答が失われても確定した駅");
     await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("応答が失われても確定した駅");
     expect(history).toHaveLength(5); expect(reconciliations).toContain("committed");
+    await controller.getByRole("button", { name: "デバイス設定" }).click();
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toBeVisible({ timeout: 20000 });
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toHaveJSProperty("naturalWidth", 1120);
     await signage.getByRole("button", { name: "映像で画面を共有" }).click();
@@ -228,9 +237,8 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await controller.screenshot({ path: "artifacts/pages-controller-mobile.png", fullPage: true });
     await expect(controller.getByText("接続設定", { exact: true })).toHaveCount(0);
     await expect(controller.getByText("Signageで反映・記録した操作履歴", { exact: true })).toHaveCount(0);
-    await controller.getByRole("button", { name: /LCD メイン画面/ }).click();
     const settingsDialog = controller.getByRole("dialog", { name: "デバイス設定" });
-    await expect(settingsDialog.getByLabel("操作するSignage")).toBeVisible();
+    await expect(settingsDialog.getByLabel("操作するSignage")).toHaveCount(0);
     await expect(settingsDialog.getByText("● Signage表示中")).toBeVisible();
     await settingsDialog.getByLabel("デバイス名", { exact: true }).fill("入口の画面");
     await settingsDialog.getByRole("button", { name: "変更を反映して記録" }).click();
@@ -240,6 +248,6 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     expect(await controller.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await settingsDialog.getByRole("button", { name: "閉じる" }).click();
     await controller.reload();
-    await expect(controller.getByRole("button", { name: /LCD 入口の画面/ })).toBeVisible();
+    await expect(controller.getByRole("button", { name: /入口の画面/ })).toBeVisible();
   } finally { await signageContext.close(); await controllerContext.close(); }
 });

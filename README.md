@@ -7,11 +7,11 @@ SignageとControllerを静的なウェブアプリとして公開します。実
 1. Supabaseでプロジェクトを作成します。
 2. **SQL Editor**で[`supabase/setup.sql`](supabase/setup.sql)全体を実行します。再実行しても既存の端末と履歴を残します。
 3. **Authentication**でメール・パスワード認証と新規登録を有効にします。**URL Configuration**のSite URLを公開サイトにし、Redirect URLsへ`https://<公開ドメイン>/controller/`と`https://<公開ドメイン>/signage/`を追加します。メール確認を使う場合、一般利用者にも送信できる独自SMTPを設定します。Supabase標準のメール送信はプロジェクトのチームメンバー宛てに制限されています。
-4. **Realtime → Settings**で **Allow public access** をオフにします。このアプリは所有者を確認するPrivate Broadcastを使います。テーブルのRealtime publicationやStorage、Edge Functionsの設定は不要です。
+4. **Realtime → Settings**で **Allow public access** をオフにします。このアプリは所有者を確認するPrivate Broadcastを使います。写真・映像・追加フォントの保存と接続通知には、追加で `supabase/studio-upgrade.sql` を実行します。テーブルのRealtime publicationやEdge Functionsの設定は不要です。
 5. フォルダーをGitHubへ追加し、**Settings → Pages → Source → GitHub Actions**を選びます。`main`へpushすると、同梱のワークフローがテスト・ビルド・公開を実行します。詳細は[`docs/github-pages.md`](docs/github-pages.md)を参照してください。
 6. このD-TIS用の接続情報は組み込み済みです。別のSupabaseプロジェクトへ配置する場合だけ、管理者がGitHub Repository variablesの`VITE_SUPABASE_URL`と`VITE_SUPABASE_PUBLISHABLE_KEY`を設定して公開します。利用者によるURLやキーの入力は不要です。
 7. 公開された`/controller/`で**新規登録**します。メール確認が有効な場合は確認メールを開き、`/signage/`と`/controller/`の両方に同じアカウントでログインします。利用者ごとに自分のSignageだけが表示されます。
-8. Signageを表示したまま、Controllerで路線・施設名・案内文を設定し、**Signageに反映して記録**を選びます。上部の**LCD メイン画面**を押すと、操作するSignage、表示状態、最終応答、デバイス名、再読込をまとめて確認・変更できます。
+8. Controllerの**Signageを追加**で表示用端末ごとの専用URLを発行します。Signageを表示したまま、一覧で操作先を選び、路線・施設名・写真・映像・スクロール文面などを設定して**Signageに反映して記録**を選びます。右上の**デバイス設定**に、ライブ画面・表示停止／再開・最終応答・デバイス名・再読込をまとめています。書体、移動時間、文字装飾を含む詳しい使い方は[`docs/signage-studio.md`](docs/signage-studio.md)を参照してください。
 
 SupabaseのProject URLとpublishable keyは、`shared/public-config.ts`の公開既定値でも指定できます。GitHub Repository variablesが優先されます。ブラウザーへ渡すのは公開用のキーだけです。`service_role`、`sb_secret_…`、データベースパスワードを使わないでください。
 

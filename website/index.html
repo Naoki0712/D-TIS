@@ -1,1 +1,171 @@
-<!doctype html><html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/brand.css"><title>D-TIS</title></head><body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="お持ちのデバイスがまちの案内に早変わりする。デジタル交通案内 D-TIS の開発・評価を紹介します。">
+  <meta name="theme-color" content="#1d1d1d">
+  <title>D-TIS — まちのみんなに、迷わない移動を。</title>
+
+  <script type="module" src="/src/main.tsx"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">本文へ移動</a>
+<header class="site-header">
+  <a class="brand" href="#top" aria-label="D-TIS ホーム"><img src="/poster-assets/logo.svg" alt="D-TIS" width="104" height="65"></a>
+  <nav id="main-menu" class="main-nav" aria-label="メインナビゲーション">
+    <a class="nav-use" data-app-link="controller" href="./controller/">システムを利用する ↗</a>
+    <a href="#intro-video">紹介動画</a><a href="#background">背景</a><a href="#about">目的・目標</a><a href="#process">開発</a><a href="#evaluation">評価・考察</a><a href="#outlook">展望</a><a href="#library">資料</a><a href="#contact">お問い合わせ</a>
+  </nav>
+  <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-menu" aria-label="メニューを開く"><span></span><span></span></button>
+</header>
+<main id="main">
+  <section id="top" class="hero" aria-labelledby="hero-title">
+    <div class="hero-image"></div>
+    <img class="ghost-image" src="/poster-assets/catchcopy.svg" alt="" aria-hidden="true">
+    <div class="hero-content">
+      <h1 id="hero-title">まちのみんなに、<br>迷わない移動を。</h1>
+      <p class="hero-lead">お持ちのデバイスが、<br>まちの案内に早変わりする。</p>
+      <div class="hero-actions"><a class="primary" data-app-link="controller" href="./controller/">システムを利用する <span aria-hidden="true">↗</span></a>
+      <a class="text-link" href="#background">D-TISについて知る <span aria-hidden="true">↓</span></a></div>
+    </div>
+  </section>
+  <aside class="research-notice home-notice content-inset">本サイトは、学校での課題研究により制作しています。アカウントを登録すると、身近なデバイスでD-TISを利用できます。</aside>
+
+  <section id="intro-video" class="section surface" aria-labelledby="video-title">
+    <h2 id="video-title">紹介動画</h2>
+    <div class="video-placeholder"><span class="play-mark" aria-hidden="true">▷</span><p>紹介動画は準備中です</p></div>
+  </section>
+
+  <section id="background" class="section" aria-labelledby="background-title">
+    <h2 id="background-title">背景</h2>
+    <div class="section-body">
+      <p class="section-lead">駅の案内を、<br>まちの中でも。</p>
+      <div class="reading-copy"><p>鉄道やバスなどの公共交通機関では、発車時刻や行き先を知らせる電光掲示板（Signage）が使われています。こうした案内は、駅ビルや温泉施設など、駅以外の場所「マチナカ」にも広がっています。</p></div>
+      <div class="context-grid">
+        <article class="example-panel">
+          <h3>マチナカでの案内の例</h3>
+          <img src="/poster-assets/aomori-signage.png" width="270" height="136" alt="あおもり旬味館の待合スペースに設置された新幹線の電光掲示板。ポスターの資料写真より" loading="lazy">
+          <h4>あおもり旬味館（駅ビル）</h4>
+          <p>あずまし広場（待合スペース）内に設置され、お買い物の後に次の新幹線を確認し、乗車まで待つことができます。</p>
+          <a class="text-link" href="https://syunmikan-abc.com/floorguide/" target="_blank" rel="noopener noreferrer">出典：あおもり旬味館 <span aria-hidden="true">↗</span></a>
+        </article>
+        <div class="barrier-panel">
+          <h3>導入・運営には、まだ壁がある。</h3>
+          <p>マチナカへの設置では、運営する人への配慮も必要です。ポスターでは、既存システムの課題として次の2点を挙げています。</p>
+          <ul class="plain-list"><li>導入や管理に難しい知識が必要</li><li>案内できる乗り物が限られる</li></ul>
+          <p class="barrier-conclusion">専用機器の購入・特注などに<br>選択肢がしぼられてしまう。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="about" class="section surface" aria-labelledby="purpose-title">
+    <h2 id="purpose-title">目的・目標</h2>
+    <div class="section-body">
+      <div class="purpose-statement"><p>デバイスを選ばない交通案内ができるシステムを開発し</p><strong>新たな交通案内の選択肢として、<br>これを提案する</strong></div>
+      <ol class="goal-list">
+        <li><span aria-hidden="true">01</span><div><h3>身近なデバイスを、案内表示に。</h3><p>専用機器を必要とせず、スマートフォンやタブレット、PCなどの身近なデバイスで交通案内ができる仕組みをつくります。</p></div></li>
+        <li><span aria-hidden="true">02</span><div><h3>難しい知識がなくても、扱える。</h3><p>導入・管理ができる仕組みをつくり、運営する人の使いやすさを考えます。</p></div></li>
+        <li><span aria-hidden="true">03</span><div><h3>さまざまな鉄道・バスへ。</h3><p>特定の路線に限らず、さまざまな鉄道・バス路線に対応することを目標にします。</p></div></li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="system" class="section system-intro" aria-labelledby="system-title">
+    <h2 id="system-title">SignageをControllerで動かします</h2>
+    <div class="section-body system-intro-grid">
+      <p class="section-lead">表示する画面と、<br>管理する画面。</p>
+      <div><p>案内を表示する「Signage」と、表示内容を管理する「Controller」。2つのウェブアプリを組み合わせ、手元のデバイスから交通案内を設定・確認します。</p><a class="text-link" href="#phase-1">開発した仕組みを見る <span aria-hidden="true">↓</span></a></div>
+    </div>
+    <div class="use-system" id="use">
+      <a class="use-card" data-app-link="controller" href="./controller/"><span class="use-number">01</span><div><h3>Controllerを開く</h3><p>アカウントを登録し、Signageの表示内容を管理します。</p></div><span aria-hidden="true">↗</span></a>
+      <a class="use-card" data-app-link="signage" href="./signage/"><span class="use-number">02</span><div><h3>Signageを開く</h3><p>案内を表示するデバイスで、同じアカウントにログインします。</p></div><span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+
+  <section id="process" class="development" aria-labelledby="development-title">
+    <div class="section development-intro">
+      <h2 id="development-title">開発</h2>
+      <div class="section-body"><p class="section-lead">デバイスを越えて、<br>ひとつの案内へ。</p><p>システムの構築、Signageの設計、Controllerの設計。<br>表示と操作をつなぐ、3つの開発を紹介します。</p></div>
+    </div>
+    <div class="story-toolbar">
+      <nav class="story-nav" aria-label="開発の項目"><a href="#phase-1" aria-label="システムの構築">01 <span>システム</span></a><a href="#phase-2" aria-label="Signageの設計">02 <span>Signage</span></a><a href="#phase-3" aria-label="Controllerの設計">03 <span>Controller</span></a></nav>
+      <button id="motion-toggle" class="motion-toggle" type="button" aria-pressed="true">演出 ON</button>
+    </div>
+
+    <article id="phase-1" class="story-chapter" aria-labelledby="architecture-title">
+      <div class="story-stage"><span class="chapter-number" aria-hidden="true">01</span>
+        <div class="story-layout">
+          <div class="story-copy"><h3 id="architecture-title">システムの構築</h3><p class="story-keyline">操作、画面表示、記録。<br>その順番を、大切に。</p>
+            <p>ODPT（公共交通オープンデータ）が配信するJSON・GTFSの両形式に対応。GitHub Pages上で、ウェブアプリとして公開しています。</p>
+            <p>Controllerから操作し、Signageで画面を表示した後にSupabaseへ記録。Controllerはそのデータを読み取り、表示側と管理側で異なる情報を示さないようにしています。</p>
+            <a class="text-link" href="#phase-2">Signageの設計へ <span aria-hidden="true">↓</span></a>
+          </div>
+          <div class="architecture-visual">
+            <svg class="architecture-diagram" viewBox="0 0 640 500" role="img" aria-labelledby="architecture-svg-title architecture-svg-desc">
+              <title id="architecture-svg-title">D-TISのシステム構成</title><desc id="architecture-svg-desc">ODPTからControllerとSignageへ乗り物情報を提供。ControllerからSignageへ操作し、Signageの画面をControllerへ投影。Signageの画面表示後にSupabaseへ記録し、Controllerが照会する。ControllerとSignageはGitHub Pagesで公開。</desc>
+              <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 9 5 1 9" fill="none" stroke="currentColor" stroke-width="1.6"/></marker></defs>
+              <rect class="hosting-boundary" x="16" y="139" width="608" height="265" rx="20"/>
+              <rect class="diagram-box" x="249" y="18" width="146" height="58" rx="29"/><text x="322" y="55" class="diagram-title">ODPT</text>
+              <g class="diagram-lines" marker-end="url(#arrow)"><path d="M282 76V104H148V165"/><path d="M362 76V104H467V165"/><path d="M248 222H366"/><path d="M367 286H248"/><path d="M467 326V382H469V431"/><path d="M375 461H147V328"/></g>
+              <rect class="diagram-box" x="47" y="169" width="201" height="157" rx="15"/><text class="diagram-title" x="147" y="222">Controller</text><text class="diagram-label" x="147" y="257">管理・操作</text><text class="diagram-label" x="147" y="290">画面の確認</text>
+              <rect class="diagram-box filled" x="368" y="169" width="217" height="157" rx="15"/><text class="diagram-title dark" x="476" y="222">Signage</text><text class="diagram-label dark" x="476" y="265">画面表示</text>
+              <text class="diagram-label" x="308" y="207">操作</text><text class="diagram-label" x="308" y="315">投影</text><text class="diagram-label" x="527" y="374">記録</text>
+              <rect class="diagram-box" x="376" y="432" width="208" height="58" rx="29"/><text class="diagram-title" x="480" y="470">Supabase</text><text class="diagram-label" x="267" y="449">照会</text>
+              <text class="diagram-label" x="321" y="128">乗り物の情報</text><text class="diagram-label" x="162" y="383">GitHub Pagesで公開</text>
+            </svg>
+          </div>
+        </div><div class="story-progress" aria-hidden="true"><span></span></div>
+      </div>
+    </article>
+
+    <article id="phase-2" class="story-chapter" aria-labelledby="signage-title">
+      <div class="story-stage"><span class="chapter-number" aria-hidden="true">02</span>
+        <div class="story-layout">
+          <div class="story-copy"><h3 id="signage-title">Signageの設計</h3><p class="story-keyline">必要な交通情報を、<br>ひと目で。</p><p>乗り物の主要な情報やオリジナルコンテンツを、電光掲示板の形式で表示します。</p><p>時刻・路線名・種別・方向・行き先を整理。英語・ピクトグラム・ナンバリングでの案内にも対応します。</p><p>英語以外の言語への対応と、より見やすいレイアウトは、今後の課題です。</p><a class="text-link" href="#phase-3">Controllerの設計へ <span aria-hidden="true">↓</span></a></div>
+          <figure class="signage-visual"><div class="display-shell"><img src="/poster-assets/signage-screen.png" width="614" height="153" alt="Signageの表示例。東京メトロ半蔵門線・押上方面。23時25分の準急南栗橋行きと、23時32分の各駅停車押上行きを、駅ナンバリングとともに表示" loading="lazy"></div><figcaption>ポスター掲載のSignage画面</figcaption><div class="display-fields"><span>時刻</span><span>路線名</span><span>種別</span><span>方向</span><span>行き先</span></div></figure>
+        </div><div class="story-progress" aria-hidden="true"><span></span></div>
+      </div>
+    </article>
+
+    <article id="phase-3" class="story-chapter chapter-light" aria-labelledby="controller-title">
+      <div class="story-stage"><span class="chapter-number" aria-hidden="true">03</span>
+        <div class="story-layout">
+          <div class="story-copy"><h3 id="controller-title">Controllerの設計</h3><p class="story-keyline">その場で設定。<br>その場で、表示を確認。</p><p>表示したい駅、路線、方向やオリジナルコンテンツを設定すると、Signageにそのまま反映されます。</p><p>Signageの表示をリアルタイムで確認できます。運営する人が表示を見に行く手間を省き、手元で修正・更新できるようにしました。</p><a class="text-link" href="#evaluation">評価・考察を見る <span aria-hidden="true">↓</span></a></div>
+          <div class="controller-visual" role="img" aria-label="Controllerの機能説明図。駅・路線・方向・コンテンツを設定し、Signageの表示を手元で確認する。実際の操作画面ではありません">
+            <div class="controller-window"><div class="window-title">Controller <span aria-hidden="true">● ● ●</span></div><div class="configuration-list"><div><span>表示する駅</span><b>押上</b></div><div><span>路線</span><b>半蔵門線</b></div><div><span>方向</span><b>押上方面</b></div><div><span>コンテンツ</span><b>施設に合わせて設定</b></div></div><div class="preview-label">Signageの画面を確認</div><div class="live-preview"><img src="/poster-assets/signage-screen.png" width="614" height="153" alt="" loading="lazy"></div></div><p class="visual-caption">機能を説明する図 / 実際の操作画面ではありません</p>
+          </div>
+        </div><div class="story-progress" aria-hidden="true"><span></span></div>
+      </div>
+    </article>
+  </section>
+
+  <section id="evaluation" class="section evaluation" aria-labelledby="evaluation-title">
+    <h2 id="evaluation-title">評価・考察<span class="heading-subtitle">（結果）</span></h2>
+    <div class="section-body">
+      <p class="section-lead">使ってもらって、<br>見えてきたこと。</p><p>本校へのご来場者に、表示を読み取るクイズとアンケートを実施しました。</p>
+      <div class="evaluation-group"><div class="group-heading"><h3>Signageの見やすさ</h3><p>回答者：13人</p></div>
+        <div class="metric-grid"><article class="metric"><h4>表示駅の正答率</h4><p class="metric-value">100<span>%</span></p><p>13 / 13人が正解</p><p class="metric-method">クイズによる評価</p></article><article class="metric"><h4>路線名の見やすさ</h4><p class="metric-value">3.46<span> / 5</span></p><p>アンケートによる評価</p></article><article class="metric"><h4>時刻・行き先の見やすさ</h4><p class="metric-value">3.85<span> / 5</span></p><p>アンケートによる評価</p></article></div>
+        <div class="feedback-grid"><blockquote><p>英語表記が小さい。<br>他の言語にも対応してほしい。</p></blockquote><blockquote><p>表示駅が小さく、<br>位置も分かりにくい。</p></blockquote></div>
+        <div class="discussion"><h4>考察</h4><p>文字が小さめの路線名は見つけにくく、配置の見直しが必要です。駅名を正しく読み取れたかという結果と、見やすさの評価を合わせて、改善につなげます。</p></div>
+      </div>
+      <div class="evaluation-group controller-evaluation"><div class="group-heading"><h3>導入性・Controllerの使いやすさ</h3><p>体験者：3人</p></div><p>ポスターには体験者数が記載されています。具体的な評価結果・コメントは未掲載です。</p></div>
+    </div>
+  </section>
+
+  <section id="outlook" class="section surface" aria-labelledby="outlook-title"><h2 id="outlook-title">展望</h2><div class="section-body outlook-grid"><article><h3>見やすさと言語を、さらに。</h3><p>高評価を得られるレイアウトや、英語以外の言語の実装方法を考えます。</p></article><article><h3>使えるデバイスと路線を、広く。</h3><p>他のデバイスでの利用可否を確認し、表示できる路線の拡充を進めます。</p></article></div></section>
+
+  <section id="library" class="section resources" aria-labelledby="resources-title"><h2 id="resources-title">研究資料</h2><div class="section-body resource-list">
+    <div class="poster-resource"><div><h3>第9回中高生情報学研究コンテスト ポスター</h3><p>デジタル交通案内「D-TIS」の開発・評価</p><p>東京都立科学技術高等学校<br>菊田直希</p><a class="text-link" href="/poster-assets/research-poster.png" target="_blank" rel="noopener">ポスターを開く <span aria-hidden="true">↗</span></a><a class="text-link" href="/poster-assets/research-poster.png" download="D-TIS_研究ポスター.png">画像をダウンロード <span aria-hidden="true">↓</span></a></div><a class="poster-thumbnail" href="/poster-assets/research-poster.png" target="_blank" rel="noopener" aria-label="研究ポスターを拡大して開く"><img src="/poster-assets/research-poster.png" width="1448" height="2048" alt="第9回中高生情報学研究コンテストのD-TIS研究ポスター" loading="lazy"></a></div>
+    <details id="docs"><summary><h3>技術ドキュメント</h3><span class="status">準備中</span><span class="plus" aria-hidden="true">＋</span></summary><div class="details-content"><p>システム構成、交通データの扱い、表示と管理の設計などを順次まとめていきます。</p><ul><li>ODPTのJSON・GTFSデータの利用</li><li>ControllerとSignageの連携</li><li>画面表示後の記録と、記録データの照会</li><li>身近なデバイスでの導入・管理</li></ul></div></details>
+    <details><summary><h3>展示・動作の動画</h3><span class="status">準備中</span><span class="plus" aria-hidden="true">＋</span></summary><div class="details-content"><p>Signageの表示やControllerの操作を紹介する動画を掲載予定です。</p></div></details>
+    <details><summary><h3>参考文献</h3><span class="plus" aria-hidden="true">＋</span></summary><ol class="details-content references"><li>株式会社 JR東日本青森商業開発「フロアガイド あおもり旬味館」<a href="https://syunmikan-abc.com/floorguide/" target="_blank" rel="noopener noreferrer">フロアガイドを開く ↗</a></li><li>一般社団法人日本バス情報協会「オープンデータ最前線2026_東出」<a href="https://busdata.or.jp/document/od2026/od2026_11.pdf" target="_blank" rel="noopener noreferrer">資料を開く ↗</a></li><li>公共交通オープンデータ協議会「協議会について | 公共交通オープンデータセンター」<a href="https://www.odpt.org/about/" target="_blank" rel="noopener noreferrer">協議会について ↗</a></li></ol><p class="reference-date">ポスターでの参照日：2026年11月3日</p></details>
+  </div></section>
+
+  <section id="contact" class="section surface" aria-labelledby="contact-title"><h2 id="contact-title">お問い合わせ</h2><div class="section-body"><p>研究や展示についてのお問い合わせ窓口です。</p><p class="research-notice">※ 本サイトは、学校での課題研究により制作したもので、一般の方・法人の方などへの提供・販売は行っておりません。</p><div class="contact-box"><h3>メールでのお問い合わせ</h3><p>準備中</p><p>連絡先の公開後、Gmailやお使いのメールアプリからお問い合わせいただけます。</p></div></div></section>
+  <section class="closing"><p aria-hidden="true">Seamless journeys<br>for everyone.</p><h2>まちのみんなに、迷わない移動を。</h2><a class="text-link" href="#top">ページの先頭へ <span aria-hidden="true">↑</span></a></section>
+</main>
+<footer class="site-footer content-inset"><img src="/poster-assets/logo.svg" width="85" height="45" alt="D-TIS"><p>デジタル交通案内「D-TIS」の開発・評価<br>東京都立科学技術高等学校　菊田直希</p></footer>
+</body>
+</html>

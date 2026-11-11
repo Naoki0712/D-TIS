@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import type { OdptData, SignageState } from "./types";
 import { effectiveDisplaySettings, selectOutput } from "../../shared/display-settings";
-import { CloudCommitError, commitApplied, getCloudClient, getDevice, heartbeatDevice, parseCommand, parseDeviceRecord,
+import { CloudCommitError, commitApplied, getCloudClient, getDevice, heartbeatDevice, announceDeviceConnection, parseCommand, parseDeviceRecord,
   readCloudConfig, reconcileApplied, registerDevice, subscribeDevice, type Command, type DeviceChannel, type DeviceRecord } from "../../shared/cloud";
 import { loadOdptData } from "../../shared/browser-odpt";
+import { prepareContent } from "./prepare-content";
 
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
 
@@ -29,6 +30,7 @@ async function painted(signal: AbortSignal) {
 
 export function useSignageRuntime() {
   const outputId = new URLSearchParams(window.location.search).get("output") || undefined;
+  const requestedDeviceId = new URLSearchParams(window.location.search).get("device") || undefined;
   const [device, setDevice] = useState<DeviceRecord | null>(null);
   const [data, setData] = useState<OdptData | null>(null);
   const [channel, setChannel] = useState<DeviceChannel | null>(null);
@@ -112,7 +114,12 @@ export function useSignageRuntime() {
           display_enabled: command.action === "display" ? (command.payload as { enabled: boolean }).enabled : previous.display_enabled,
           refresh_version: previous.refresh_version + (command.action === "refresh" ? 1 : 0),
         };
-        nextData = command.action === "display" ? previousData : await readData(staged, command.action === "refresh");
+        const display = effectiveDisplaySettings(staged.settings, outputId);
+        const results = await Promise.all([
+          command.action === "display" ? Promise.resolve(previousData) : readData(staged, command.action === "refresh"),
+          staged.display_enabled && command.action === "settings" ? prepareContent(display, lifetime.signal) : Promise.resolve(),
+        ]);
+        nextData = results[0];
         if (lifetime.signal.aborted) return;
         const routes = effectiveDisplaySettings(staged.settings, outputId).selectedRoutes;
         if (command.action !== "display" && routes.length && (!nextData || nextData.source === "unavailable")) {
@@ -182,7 +189,10 @@ export function useSignageRuntime() {
       if (error || !auth.session) throw error ?? new Error("ログインしてください。");
       if (lifetime.signal.aborted) return;
       const identityKey = `d-tis.signage.id.${readCloudConfig().url}.${auth.session.user.id}`;
-      let id = localStorage.getItem(identityKey);
+      if (requestedDeviceId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(requestedDeviceId)) {
+        throw new Error("SignageのURLが正しくありません。Controllerから専用URLを開き直してください。");
+      }
+      let id = requestedDeviceId ?? localStorage.getItem(identityKey);
       if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
         id = crypto.randomUUID(); localStorage.setItem(identityKey, id);
       }
@@ -201,7 +211,10 @@ export function useSignageRuntime() {
           if (lifetime.signal.aborted) return;
           let connectingWire: DeviceChannel | null = null;
           try {
-            const record = await registerDevice(id!, `Signage ${id!.slice(0, 8)}`);
+            // Explicit links identify an already registered Signage. Never create
+            // an unknown UUID here, or another account's link could be mistaken
+            // for a new screen when its row is hidden by RLS.
+            const record = requestedDeviceId ? await getDevice(id!) : await registerDevice(id!, `Signage ${id!.slice(0, 8)}`);
             const nextData = await readData(record);
             if (lifetime.signal.aborted) return;
             current = record; currentData = nextData; remember(record); render(record, nextData);
@@ -213,6 +226,11 @@ export function useSignageRuntime() {
             }, status => { if (!lifetime.signal.aborted) setConnectionError(status === "SUBSCRIBED" ? null : "操作用の接続を復旧しています。表示は継続します。"); });
             if (lifetime.signal.aborted) { await connectingWire.close(); return; }
             wire = connectingWire; setChannel(wire);
+            const connectedRecord = await announceDeviceConnection(id!);
+            if (lifetime.signal.aborted) return;
+            if (connectedRecord && current === record && !busy && !pending) {
+              current = connectedRecord; remember(connectedRecord); render(connectedRecord, nextData);
+            }
             await heartbeatDevice(id!).catch(error => { if (!lifetime.signal.aborted) setConnectionError(message(error)); });
             if (lifetime.signal.aborted) return;
             heartbeat = window.setInterval(() => void poll(), 7000);
@@ -241,7 +259,7 @@ export function useSignageRuntime() {
       window.removeEventListener("d-tis:odpt-config", refreshData); window.removeEventListener("d-tis-config", refreshData);
       void wire?.close();
     };
-  }, [outputId]);
+  }, [outputId, requestedDeviceId]);
   const facility = device?.settings ?? null;
   const selectedOutput = facility ? selectOutput(facility, outputId) : undefined;
   const state: SignageState | null = device ? { deviceId: device.id, hostname: device.name, paired: true, pairing: null,

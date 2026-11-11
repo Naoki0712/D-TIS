@@ -1,0 +1,11 @@
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/biz-udpgothic/400.css";
+@import "@fontsource/biz-udpgothic/700.css";
+@import "@fontsource/biz-udpmincho/400.css";
+:root, html.windows { --latin-font: Inter, Helvetica, "BIZ UDPGothic", sans-serif; --dtis-gothic: Inter, Helvetica, "BIZ UDPGothic", sans-serif; --dtis-mincho: Inter, Helvetica, "BIZ UDPMincho", serif; }
+html, body, button, input, select, textarea { font-family: var(--latin-font); }
+[data-font-preset="mincho"], .ticker-font-mincho { font-synthesis: none; }
+.ticker-font-mincho { font-family: var(--dtis-mincho); font-weight: 400 !important; }
+.ticker-font-gothic { font-family: var(--dtis-gothic); }
+.ticker-font-custom { font-family: var(--dtis-custom-font, var(--dtis-gothic)); }

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { getFontEmbedCSS, toJpeg } from "html-to-image";
+import { toJpeg } from "html-to-image";
+import { previewFontCss } from "./preview-fonts";
 import type { DeviceChannel } from "./cloud";
 
 function iceServers(): RTCIceServer[] {
@@ -19,7 +20,6 @@ export function SignageSharing({ channel, outputId }: { channel: DeviceChannel |
   useEffect(() => {
     if (!channel) return;
     let alive = true, captureBusy = false, watchUntil = 0, lastCapture = 0;
-    let fonts: string | undefined;
     const pendingIce = new Map<string, RTCIceCandidateInit[]>();
     async function offer(viewer: string) {
       if (!stream || peers.current.has(viewer) || peers.current.size >= 8) return;
@@ -61,7 +61,7 @@ export function SignageSharing({ channel, outputId }: { channel: DeviceChannel |
       captureBusy = true; lastCapture = Date.now();
       void (async () => {
         try {
-          fonts ??= await getFontEmbedCSS(element);
+          const fonts = await previewFontCss(element);
           const width = Math.min(1120, element.scrollWidth);
           const height = Math.min(1600, Math.round(element.scrollHeight * width / element.scrollWidth));
           const jpeg = await toJpeg(element, { quality: .65, pixelRatio: 1, canvasWidth: width, canvasHeight: height, fontEmbedCSS: fonts,
