@@ -2,6 +2,7 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { FacilitySettings } from "./display-settings";
 import { normalizeCloudFacility, parseCommand, type CloudMessage, type Command } from "./cloud-protocol";
 import { boundedCloudFetch } from "./cloud-fetch";
+import { DEFAULT_CLOUD_CONFIG } from "./public-config";
 export { COMMAND_LIFETIME_MS, newCommand, normalizeCloudFacility, parseCommand } from "./cloud-protocol";
 export type { CloudMessage, Command, CommandAction } from "./cloud-protocol";
 
@@ -29,8 +30,12 @@ export function readCloudConfig(): CloudConfig {
   let stored: Partial<CloudConfig> = {};
   try { stored = JSON.parse(localStorage.getItem(CONFIG_KEY) ?? "{}"); } catch { /* Fall back to build configuration. */ }
   const env = (import.meta as ImportMeta & { env?: Record<string, string> }).env ?? {};
-  return { url: typeof stored?.url === "string" ? stored.url : env.VITE_SUPABASE_URL ?? "",
-    key: typeof stored?.key === "string" ? stored.key : env.VITE_SUPABASE_PUBLISHABLE_KEY ?? env.VITE_SUPABASE_ANON_KEY ?? "" };
+  const url = env.VITE_SUPABASE_URL?.trim();
+  const key = (env.VITE_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_ANON_KEY)?.trim();
+  if (url && key) return { url, key };
+  if (DEFAULT_CLOUD_CONFIG.url && DEFAULT_CLOUD_CONFIG.key) return { ...DEFAULT_CLOUD_CONFIG };
+  return { url: typeof stored?.url === "string" ? stored.url : "",
+    key: typeof stored?.key === "string" ? stored.key : "" };
 }
 
 export function validateCloudConfig(config: CloudConfig): CloudConfig {
@@ -63,7 +68,7 @@ export function getCloudClient(): SupabaseClient {
     if (client) { void client.removeAllChannels(); client.auth.stopAutoRefresh(); }
     clientConfig = signature;
     client = createClient(config.url, config.key, { global: { fetch: boundedCloudFetch },
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false } });
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
   }
   return client;
 }

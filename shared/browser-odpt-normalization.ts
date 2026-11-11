@@ -36,11 +36,12 @@ const id = (row: Raw) => row["owl:sameAs"] ?? row["@id"] ?? "";
 const short = (value?: string): string => value?.split(":").at(-1)?.split(".").at(-1) ?? "";
 const list = (value: any): any[] => Array.isArray(value) ? value : value == null ? [] : [value];
 const title = (value: any, fallback = ""): string => typeof value === "string" ? value : value?.ja ?? value?.en ?? fallback;
-const supported = (railway: string) => railway !== "odpt.Railway:TokyoMetro.Ginza";
+const supported = (railway: string) => typeof railway === "string" && railway.startsWith("odpt.Railway:");
 const cleanDirection = (name: string) => name.replace(/方面$/, "");
 const englishDirection = (name: string) => name.replace(/^For\s+/i, "");
 
 const railwayDefaults: Record<string, [string, string, string]> = {
+  "TokyoMetro.Ginza": ["銀座線", "Tokyo Metro Ginza Line", "G"],
   "TokyoMetro.Chiyoda": ["千代田線", "Tokyo Metro Chiyoda Line", "C"],
   "TokyoMetro.Fukutoshin": ["副都心線", "Tokyo Metro Fukutoshin Line", "F"],
   "TokyoMetro.Hanzomon": ["半蔵門線", "Tokyo Metro Hanzomon Line", "Z"],

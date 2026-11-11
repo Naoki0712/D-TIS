@@ -4,6 +4,7 @@ import {
 } from "./browser-odpt-normalization";
 import { normalizeGtfs, unzipGtfs } from "./browser-gtfs";
 import type { SelectedRoute } from "./display-settings";
+import { DEFAULT_ODPT_TOKEN, DEFAULT_ODPT_BASE_URL } from "./odpt-defaults";
 
 export type { CatalogLine } from "./browser-odpt-normalization";
 export interface BrowserOdptConfig {
@@ -26,18 +27,18 @@ export interface BrowserOdptData {
 type GtfsSnapshot = { lines: Cache["lines"]; timetables: Cache["timetables"]; warnings?: string[] };
 type BrowserCache = Cache & { gtfsFeeds?: Record<string, GtfsSnapshot> };
 export const ODPT_CONFIG_KEY = "d-tis.odpt.config.v1";
-const defaultBase = "https://api.odpt.org/api/v4";
+const defaultBase = DEFAULT_ODPT_BASE_URL;
 const memory = new Map<string, BrowserCache>();
 const requests = new Map<string, Promise<BrowserCache>>();
 const freshnessMs = 15 * 60 * 1000;
 
 export function readOdptConfig(): BrowserOdptConfig {
   const env = (import.meta as ImportMeta & { env?: Record<string, string> }).env;
-  const fallback = { token: env?.VITE_ODPT_API_TOKEN ?? "", baseUrl: env?.VITE_ODPT_API_BASE_URL || defaultBase, gtfsUrls: [] as string[] };
-  try {
-    const raw = JSON.parse(globalThis.localStorage?.getItem(ODPT_CONFIG_KEY) ?? "null");
-    return raw && typeof raw === "object" ? normalizeOdptConfig({ ...fallback, ...raw }) : fallback;
-  } catch { return fallback; }
+  // One deployment has one data source. Ignore obsolete per-browser settings so
+  // Controller and Signage cannot silently use different tokens or feeds.
+  return normalizeOdptConfig({ token: env?.VITE_ODPT_API_TOKEN?.trim() || DEFAULT_ODPT_TOKEN,
+    baseUrl: env?.VITE_ODPT_API_BASE_URL || defaultBase,
+    gtfsUrls: String(env?.VITE_GTFS_URLS || "").split(/\r?\n/).map(value => value.trim()).filter(Boolean) });
 }
 
 export function normalizeOdptConfig(config: BrowserOdptConfig): BrowserOdptConfig {
@@ -135,7 +136,7 @@ async function refresh(config: BrowserOdptConfig, previous: BrowserCache | null,
       available = cache.lines.length > 0;
     } catch {
       if (previous) cache = { ...previous, lines: previous.lines.filter(line => !line.id.startsWith("gtfs.")), timetables: previous.timetables.filter(table => !table.railway.startsWith("gtfs.")), source: "cache", warnings: ["ODPTに接続できません。保存済みの情報を表示しています。"] };
-      else cache.warnings!.push("ODPTに接続できません。トークン・配信先・ブラウザーのCORS許可を確認してください。");
+      else cache.warnings!.push("交通情報に接続できません。時間をおいて再度お試しください。");
       available = cache.lines.length > 0;
     }
   }
@@ -165,7 +166,7 @@ async function refresh(config: BrowserOdptConfig, previous: BrowserCache | null,
     cache.lines.push(...feed.lines); cache.timetables.push(...feed.timetables);
     cache.warnings = [...(cache.warnings ?? []), ...(feed.warnings ?? [])];
   }
-  if (!available) throw new Error(config.token || config.gtfsUrls?.length ? cache.warnings?.join(" ") || "交通情報を取得できませんでした。" : "接続設定でODPTトークン、またはGTFSのURLを設定してください。");
+  if (!available) throw new Error(config.token || config.gtfsUrls?.length ? cache.warnings?.join(" ") || "交通情報を取得できませんでした。" : "交通情報の配信が設定されていません。サービス管理者にお知らせください。");
   return { ...cache, gtfsFeeds: feeds };
 }
 

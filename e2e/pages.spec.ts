@@ -1,7 +1,9 @@
 import { test, expect, type BrowserContext, type Page, type WebSocketRoute } from "@playwright/test";
 import { Buffer } from "node:buffer";
+import { DEFAULT_CLOUD_CONFIG } from "../shared/public-config";
+import { odptFixture } from "./odpt-fixture";
 
-const SUPABASE = "http://127.0.0.1:54321";
+const SUPABASE = DEFAULT_CLOUD_CONFIG.url;
 const owner = "10000000-0000-4000-8000-000000000001";
 const deviceId = "20000000-0000-4000-8000-000000000002";
 const user = { id: owner, aud: "authenticated", role: "authenticated", email: "operator@example.test", email_confirmed_at: "2026-01-01T00:00:00Z", app_metadata: {}, user_metadata: {}, created_at: "2026-01-01T00:00:00Z" };
@@ -67,8 +69,6 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
   async function mock(context: BrowserContext, source: string) {
     await context.addInitScript(({ url, owner, deviceId, role }) => {
       if (location.origin === "null") return;
-      localStorage.setItem("d-tis.cloud.config.v1", JSON.stringify({ url, key: "sb_publishable_local_test" }));
-      localStorage.setItem("d-tis.odpt.config.v1", JSON.stringify({ token: "", gtfsUrls: [] }));
       localStorage.setItem(`d-tis.signage.id.${url}.${owner}`, deviceId);
       // Supply deterministic local video without opening an OS screen picker.
       // RTCPeerConnection, signaling, ICE and media playback stay real.
@@ -86,6 +86,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
       };
     }, { url: SUPABASE, owner, deviceId, role: source });
     context.on("page", page => page.on("pageerror", error => browserErrors.push(`${source}: ${error.message}`)));
+    await context.route("https://api.odpt.org/**", route => route.fulfill({ json: odptFixture(new URL(route.request().url())) }));
     await context.route(`${SUPABASE}/**`, async route => {
       const request = route.request(), url = new URL(request.url());
       const json = async (data: unknown, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "*" }, body: JSON.stringify(data) });
@@ -149,6 +150,19 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await expect(controller.getByLabel("施設名", { exact: true })).toBeEnabled();
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toBeVisible({ timeout: 20000 });
     expect(joins.length).toBeGreaterThanOrEqual(2); expect(joins.every(Boolean)).toBe(true);
+    await controller.getByRole("button", { name: "＋ 路線を追加する" }).click();
+    const routeDialog = controller.getByRole("dialog", { name: "路線を追加", exact: true });
+    await expect(routeDialog.getByRole("combobox", { name: "乗り物", exact: true })).toHaveValue("rail");
+    await expect(routeDialog.getByRole("combobox", { name: "路線・系統で絞り込み", exact: true }).locator("option")).toHaveCount(3);
+    await expect(routeDialog.getByRole("combobox", { name: "路線・系統で絞り込み", exact: true })).toContainText("銀座線");
+    await expect(routeDialog.getByRole("button", { name: /試験駅130/ })).toHaveCount(0);
+    await routeDialog.getByRole("button", { name: /続きを表示/ }).click();
+    await routeDialog.getByRole("button", { name: /試験駅130/ }).click();
+    await routeDialog.getByLabel("路線の候補").getByRole("button", { name: "つくばエクスプレス" }).click();
+    await expect(routeDialog.getByRole("button", { name: "追加する", exact: true })).toBeEnabled();
+    await routeDialog.getByRole("combobox", { name: "乗り物", exact: true }).selectOption("bus");
+    await expect(routeDialog.getByRole("button", { name: /試験バス停/ })).toBeVisible();
+    await routeDialog.getByRole("button", { name: "キャンセル" }).click();
 
     await controller.getByLabel("施設名", { exact: true }).fill("描画後に記録する駅");
     await controller.getByLabel("画面下部のスクロール文面").fill("足元にご注意ください");
@@ -176,8 +190,10 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     expect(commits[3].rendered).toContain("記録に失敗する変更");
 
     controller.on("dialog", dialog => dialog.accept());
+    await controller.getByRole("button", { name: /LCD メイン画面/ }).click();
     await controller.getByRole("button", { name: "Supabaseから再読込" }).click();
     await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("描画後に記録する駅");
+    await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     await controller.reload();
     await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("描画後に記録する駅");
     await controller.getByRole("button", { name: "両画面の交通情報を更新" }).click();
@@ -210,5 +226,20 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await controller.setViewportSize({ width: 390, height: 844 });
     expect(await controller.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await controller.screenshot({ path: "artifacts/pages-controller-mobile.png", fullPage: true });
+    await expect(controller.getByText("接続設定", { exact: true })).toHaveCount(0);
+    await expect(controller.getByText("Signageで反映・記録した操作履歴", { exact: true })).toHaveCount(0);
+    await controller.getByRole("button", { name: /LCD メイン画面/ }).click();
+    const settingsDialog = controller.getByRole("dialog", { name: "デバイス設定" });
+    await expect(settingsDialog.getByLabel("操作するSignage")).toBeVisible();
+    await expect(settingsDialog.getByText("● Signage表示中")).toBeVisible();
+    await settingsDialog.getByLabel("デバイス名", { exact: true }).fill("入口の画面");
+    await settingsDialog.getByRole("button", { name: "変更を反映して記録" }).click();
+    await expect(settingsDialog.locator(".cloud-sync")).toContainText("確定リビジョン 6");
+    expect(record.settings.devices[0].name).toBe("入口の画面");
+    await controller.screenshot({ path: "artifacts/pages-controller-device-mobile.png", fullPage: true });
+    expect(await controller.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await settingsDialog.getByRole("button", { name: "閉じる" }).click();
+    await controller.reload();
+    await expect(controller.getByRole("button", { name: /LCD 入口の画面/ })).toBeVisible();
   } finally { await signageContext.close(); await controllerContext.close(); }
 });

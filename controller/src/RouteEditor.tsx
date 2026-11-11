@@ -12,12 +12,16 @@ export function RouteEditor({ settings, lines, disabled, onChange }: {
   const editDialog = useRef<HTMLDialogElement>(null);
   const [stationQuery, setStationQuery] = useState("");
   const [lineQuery, setLineQuery] = useState("");
+  const [mode, setMode] = useState<"all" | "rail" | "bus">("rail");
+  const [lineFilter, setLineFilter] = useState("");
+  const [visibleCount, setVisibleCount] = useState(120);
   const [chosenStation, setChosenStation] = useState<StationChoice>();
   const [chosenLine, setChosenLine] = useState("");
   const [editing, setEditing] = useState<SelectedRoute>();
   const [directions, setDirections] = useState<string[]>([]);
   const [options, setOptions] = useState<Required<RouteDisplaySettings>>(routeDisplaySettings({ railway: "", station: "", direction: "" }));
-  const stations = useMemo(() => stationChoices(lines, stationQuery), [lines, stationQuery]);
+  const filteredLines = useMemo(() => lines.filter(line => mode === "all" || (line.mode ?? "rail") === mode), [lines, mode]);
+  const stations = useMemo(() => stationChoices(filteredLines.filter(line => !lineFilter || line.id === lineFilter), stationQuery), [filteredLines, lineFilter, stationQuery]);
   const matches = matchingLines(chosenStation, lineQuery);
   const selected = chosenStation?.matches.find(match => match.line.id === chosenLine);
   const editLine = lines.find(line => line.id === editing?.railway);
@@ -57,7 +61,7 @@ export function RouteEditor({ settings, lines, disabled, onChange }: {
   }
   return <>
     <div className="section-heading"><b>路線・乗り物</b><i /><button type="button" className="add-route" disabled={disabled || !lines.length} onClick={() => {
-      setStationQuery(""); setLineQuery(""); setChosenStation(undefined); setChosenLine(""); addDialog.current?.showModal();
+      setStationQuery(""); setLineQuery(""); setLineFilter(""); setVisibleCount(120); setChosenStation(undefined); setChosenLine(""); addDialog.current?.showModal();
     }}>＋ 路線を追加する</button></div>
     <div className="route-strip" aria-label="登録した路線">{groupRoutes(settings.selectedRoutes).map(group => {
       const route = group[0], line = lines.find(item => item.id === route.railway);
@@ -72,12 +76,18 @@ export function RouteEditor({ settings, lines, disabled, onChange }: {
       if (event.key === "Enter" && event.target instanceof HTMLInputElement) event.preventDefault();
     }}>
       <div className="dialog-head"><h2 id="add-route-title">路線を追加</h2><button type="button" aria-label="閉じる" onClick={() => addDialog.current?.close()}>×</button></div>
-      <label>1. 駅・停留所を検索<input type="search" value={stationQuery} onChange={event => { setStationQuery(event.target.value); setChosenStation(undefined); setChosenLine(""); }} placeholder="駅名・駅番号で検索" /></label>
-      <div className="search-results station-results" aria-label="駅・停留所の候補">{stations.slice(0, 120).map(choice => <button type="button" key={choice.name}
+      <div className="catalog-filters">
+        <label>乗り物<select value={mode} onChange={event => { setMode(event.target.value as typeof mode); setLineFilter(""); setVisibleCount(120); setChosenStation(undefined); setChosenLine(""); }}><option value="rail">鉄道</option><option value="bus">バス</option><option value="all">すべて</option></select></label>
+        <label>路線・系統で絞り込み<select value={lineFilter} onChange={event => { setLineFilter(event.target.value); setVisibleCount(120); setChosenStation(undefined); setChosenLine(""); }}><option value="">すべての路線・系統（{filteredLines.length}件）</option>{filteredLines.map(line => <option key={line.id} value={line.id}>{line.name}</option>)}</select></label>
+      </div>
+      <label>1. 駅・停留所を検索<input type="search" value={stationQuery} onChange={event => { setStationQuery(event.target.value); setVisibleCount(120); setChosenStation(undefined); setChosenLine(""); }} placeholder="駅名・駅番号で検索" /></label>
+      <p className="muted" role="status">{stations.length}件中 {Math.min(visibleCount, stations.length)}件を表示</p>
+      <div className="search-results station-results" aria-label="駅・停留所の候補">{stations.slice(0, visibleCount).map(choice => <button type="button" key={choice.name}
         className={chosenStation?.name === choice.name ? "selected" : ""} aria-pressed={chosenStation?.name === choice.name}
         onClick={() => { setChosenStation(choice); setChosenLine(""); setLineQuery(""); }}>
         <strong>{choice.name}</strong><small>{choice.matches.map(match => match.line.name).join(" / ")}</small>
-      </button>)}{!stations.length && <p>該当する駅・停留所がありません。</p>}{stations.length > 120 && <p className="muted">駅名を入力して候補を絞り込めます。</p>}</div>
+      </button>)}{!stations.length && <p>該当する駅・停留所がありません。</p>}</div>
+      {stations.length > visibleCount && <button type="button" className="catalog-more" onClick={() => setVisibleCount(count => count + 120)}>続きを表示（残り{stations.length - visibleCount}件）</button>}
       <label>2. 路線を検索<input type="search" value={lineQuery} disabled={!chosenStation} onChange={event => setLineQuery(event.target.value)} placeholder={chosenStation ? `${chosenStation.name}の路線を検索` : "先に駅・停留所を選択してください"} /></label>
       <div className="search-results line-results" aria-label="路線の候補">{matches.map(({ line }) => <button type="button" key={line.id} className={chosenLine === line.id ? "selected" : ""}
         aria-pressed={chosenLine === line.id} onClick={() => setChosenLine(line.id)}><img src={railwayAsset(line.id)} alt="" /><strong>{line.name}</strong></button>)}
