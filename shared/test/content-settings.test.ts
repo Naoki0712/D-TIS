@@ -23,6 +23,17 @@ test("untrusted content cannot inject CSS, scripts, paths, or oversized fields",
   assert.throws(() => contentSettings({ media: Array.from({ length: 21 }, () => ({})) }));
   assert.throws(() => contentSettings({ appearance: { preset: "custom" } }));
 });
+
+test("all three ticker sizes survive validation while legacy ticker settings remain compatible", () => {
+  const segments = [{ id: "notice", text: "お足元にご注意ください" }];
+  for (const size of ["small", "medium", "large"] as const) {
+    const normalized = contentSettings({ ticker: { speed: 70, size, segments } });
+    assert.equal(normalized.ticker?.size, size);
+    assert.equal(normalized.tickerText, segments[0].text);
+  }
+  assert.deepEqual(contentSettings({ ticker: { speed: 70, segments } }).ticker, { speed: 70, segments });
+  assert.throws(() => contentSettings({ ticker: { speed: 70, size: "huge", segments } }), /サイズ/);
+});
 test("walking estimates use valid coordinates, manual fallback, and additional boarding time", () => {
   assert.equal(locationFrom(null, 139), undefined);
   const origin = { latitude: 35, longitude: 139 }, dest = { latitude: 35.01, longitude: 139 };

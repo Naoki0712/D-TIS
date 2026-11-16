@@ -15,7 +15,7 @@
 .direction-name, .bus-title { padding-bottom: 12px; border-bottom: 8px solid var(--line-color); }
 .route-name, .direction-name, .destination-name { overflow-wrap: anywhere; }
 .departure-list { margin-top: clamp(12px, 3vh, 32px); }
-.departure-list article { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) var(--board-icon) minmax(0, 2.7fr); align-items: center; gap: clamp(14px, 1.7vw, 36px); padding-block: clamp(20px, 3.4vh, 44px); border-bottom: 3px solid #3a3a3a; }
+.departure-list article { display: grid; grid-template-columns: max-content minmax(0, 1fr) var(--board-icon) minmax(0, 2.7fr); align-items: center; gap: clamp(12px, 1.7vw, 36px); padding-block: clamp(20px, 3.4vh, 44px); border-bottom: 3px solid #3a3a3a; }
 .departure-list article:last-child { border-bottom: 0; }
 .departure-list article > time { font-size: var(--board-number); line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; letter-spacing: -.055em; }
 .train-type { display: flex; flex-direction: column; align-items: center; text-align: center; }
@@ -24,7 +24,7 @@
 .destination-code { width: 100%; aspect-ratio: 1; object-fit: contain; }
 .destination-name strong, .destination-name span { display: block; }
 .destination-name strong { line-height: 1.15; }
-.departure-list article.without-train-type { grid-template-columns: minmax(0, 1.25fr) var(--board-icon) minmax(0, 3.7fr); }
+.departure-list article.without-train-type { grid-template-columns: max-content var(--board-icon) minmax(0, 3.7fr); }
 .route-heading.hide-line-name, .route-heading.hide-direction { grid-template-columns: clamp(64px, 6vw, 120px) minmax(0, 1fr); }
 .route-heading.hide-line-name.hide-direction { grid-template-columns: clamp(64px, 6vw, 120px); }
 .train-type .car-count { color: #eee; border: 1px solid #777; border-radius: 6px; padding: 2px 9px; white-space: nowrap; }
@@ -33,8 +33,11 @@
 .train-type.with-car-count > span:not(.car-count) { grid-column: 1 / -1; grid-row: 2; }
 .train-type.with-car-count .car-count { grid-column: 2; grid-row: 1; margin: 0; font-size: max(14px, calc(var(--board-secondary) * .8)); }
 .train-type.with-car-count.type-hidden { display: flex; }
-.signage.has-ticker { --ticker-height: clamp(44px, 6.4vh, 76px); --board-unit: calc((100svh - var(--ticker-height)) / 100); }
-.signage-ticker { flex: none; height: var(--ticker-height); width: 100%; overflow: hidden; background: #303030; border-top: 2px solid #8f74df; font-size: clamp(22px, 2.3vw, 42px); line-height: calc(var(--ticker-height) - 2px); }
+.signage { --display-secondary: clamp(16px, 1.9vw, 38px); --ticker-font-size: clamp(30px, 3.4vw, 64px); --ticker-height: calc(var(--ticker-font-size) * 1.6 + 2px); }
+.signage[data-ticker-size="small"] { --ticker-font-size: clamp(24px, 2.7vw, 48px); }
+.signage[data-ticker-size="large"] { --ticker-font-size: clamp(38px, 4.2vw, 80px); }
+.signage.has-ticker { --board-unit: calc((100svh - var(--ticker-height)) / 100); }
+.signage-ticker { flex: none; height: var(--ticker-height); width: 100%; display: flex; align-items: center; overflow: hidden; background: #303030; border-top: 2px solid #8f74df; font-size: var(--ticker-font-size); line-height: 1.4; }
 .ticker-track { display: flex; width: max-content; animation: signage-ticker-scroll var(--ticker-duration, 30s) linear infinite; }
 .ticker-track > span { flex: none; min-width: 100vw; padding: 0 32px; white-space: pre; }
 .signage-ticker:hover .ticker-track, .signage-ticker:focus .ticker-track { animation-play-state: paused; }

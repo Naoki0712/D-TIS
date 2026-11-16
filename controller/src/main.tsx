@@ -148,11 +148,16 @@ function App() {
     setDraft(next); setDirty(true); dirtyRef.current = true; setNote("未保存の変更があります。");
   }
   function select(id: string, output?: string) {
-    if (operation.current) return;
-    if (dirty && !window.confirm("未保存の設定を破棄して操作対象を切り替えますか？")) return;
+    if (operation.current) return false;
+    if (id === activeId && (!output || output === outputId)) return true;
+    if (dirty && !window.confirm("未保存の設定を破棄して操作対象を切り替えますか？")) return false;
     dirtyRef.current = false; setDirty(false);
-    if (id === activeId && active) { setDraft(active.settings); setBaseRevision(active.revision); }
-    setActiveId(id); if (output) setOutputId(output);
+    const target = devices.find(device => device.id === id);
+    setDraft(target?.settings ?? null); setLoadedId(target?.id ?? "");
+    setBaseRevision(target?.revision ?? 0);
+    setOutputId(output ?? (target ? selectOutput(target.settings)?.id ?? target.settings.devices[0]?.id ?? "" : ""));
+    setActiveId(id); setNote("");
+    return true;
   }
   async function refresh() {
     if (!active || operation.current) return;
@@ -233,14 +238,24 @@ function App() {
   }
 
   return <main className="controller equipment-controller">
-    <AppHeader product="Controller"><button className="studio-settings-button" type="button" aria-haspopup="dialog" aria-expanded={deviceMenuOpen} aria-controls="device-settings" disabled={busy || !active} onClick={() => openDeviceMenu()}>デバイス設定 <span aria-hidden="true">☰</span></button></AppHeader>
+    <AppHeader product="Controller"><div className="equipment-shelf-wrapper"><nav className="equipment-shelf" aria-label="Signage一覧">
+      {devices.map(device => {
+        const present = !!device.last_seen_at && now - Date.parse(device.last_seen_at) < 25000;
+        const name = device.settings.devices[0]?.name || device.name;
+        const selected = device.id === activeId;
+        return <div key={device.id} className={`equipment-book${selected ? " selected" : ""}${device.display_enabled ? "" : " stopped"}`}>
+          <button className="book-select" type="button" disabled={busy} aria-pressed={selected} onClick={() => select(device.id)}>
+            <span className="book-type">SIGNAGE <i className={present ? "online" : ""} aria-hidden="true" /></span>
+            <strong title={name}>{name}</strong><small>{present ? "接続中" : "接続待ち"}</small>
+          </button>
+          <button className="book-settings" type="button" disabled={busy} aria-label={`${name}のデバイス設定`} aria-haspopup="dialog" aria-controls="device-settings" onClick={() => { if (select(device.id)) openDeviceMenu(); }}>⚙</button>
+        </div>;
+      })}
+      <button className="equipment-add" type="button" disabled={busy} aria-label="＋ Signageを追加" title="Signageを追加" onClick={() => { setCreatedUrl(""); addDialog.current?.showModal(); }}>＋</button>
+    </nav></div></AppHeader>
     <section className="page equipment-page">
       {error && <p className="feedback error" role="alert">{error}</p>}
-      <section className="fleet-section" aria-label="Signage一覧"><div className="section-heading"><h1>Signage</h1><i /><button type="button" disabled={busy} onClick={() => { setCreatedUrl(""); addDialog.current?.showModal(); }}>＋ Signageを追加</button></div>
-        <p className="muted">このアカウントのすべてのSignageを、ここから管理できます。</p>
-        <div className="fleet-list">{devices.map(device => <button key={device.id} type="button" disabled={busy} className={device.id === activeId ? "selected" : ""} aria-pressed={device.id === activeId} onClick={() => select(device.id)}><strong>{device.settings.devices[0]?.name || device.name}</strong><small>{device.last_seen_at && now - Date.parse(device.last_seen_at) < 25000 ? "● 接続中" : "○ 接続待ち"} · {device.id.slice(0, 8)}</small></button>)}</div>
-        {!!notifications.length && <details className="connection-notices" open><summary>Signageの接続通知（{notifications.length}）</summary><ul aria-live="polite">{notifications.map((notice, index) => <li key={`${index}-${notice}`}>{notice}</li>)}</ul><button type="button" onClick={() => setNotifications([])}>通知を閉じる</button></details>}
-      </section>
+      {!!notifications.length && <details className="connection-notices"><summary>Signageの接続通知（{notifications.length}）</summary><ul aria-live="polite">{notifications.map((notice, index) => <li key={`${index}-${notice}`}>{notice}</li>)}</ul><button type="button" onClick={() => setNotifications([])}>通知を閉じる</button></details>}
       {active ? <>
         {!online && <p className="feedback">表示用のデバイスで<a href={signageUrl} target="_blank" rel="noreferrer">このSignageの専用URL</a>を開き、同じアカウントでログインしてください。</p>}
         <p className="feedback" role="status">{busy ? "描画・記録の完了を待っています…" : note}</p>
@@ -249,10 +264,8 @@ function App() {
           <div className="customize-heading"><div><p className="eyebrow">表示内容を管理</p><h2 className="page-title"><i />{output.name}</h2></div></div>
           <form onSubmit={save}><fieldset disabled={!canEdit || conflict}>
             <p className="control-help">{catalogNote}</p><p className="control-help">{odptNote}</p>
-            <RouteEditor key={`${activeId}|${output.id}`} settings={config} lines={lines} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, settings))} />
-            <div className="section-heading"><b>表示する施設名</b><i /></div>
-            <label className="facility-only">施設名<input value={config.facilityName} maxLength={200} required onChange={event => edit(withOutputSettings(draft, output.id, { ...config, facilityName: event.target.value }))} /></label>
-            <ContentEditor key={`${activeId}|${output.id}`} settings={config} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, { ...settings,
+            <RouteEditor key={`routes|${activeId}|${output.id}`} settings={config} lines={lines} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, settings))} />
+            <ContentEditor key={`content|${activeId}|${output.id}`} settings={config} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, { ...settings,
               selectedRoutes: settings.selectedRoutes.map(route => ({ ...route, stationLocation: route.stationLocation ?? lines.find(line => line.id === route.railway)?.stations.find(station => station.id === route.station)?.location })),
             }))} />
             <div className="actions"><span>{dirty ? "未保存の変更があります" : "Supabaseの確定済み設定"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>Signageに反映して記録</button></div>

@@ -1,5 +1,6 @@
-import { cachedDestinationCode, externalStationCode } from "./browser-external-station-codes";
+import { cachedDestinationCode, externalStationCode, externalStationName } from "./browser-external-station-codes";
 import { locationFrom, type GeoPoint } from "./travel-time";
+import { normalizeStationEnglish } from "./railway-readings";
 
 /** ODPT v4 JSON-LD is normalized here so every operator uses the same board. */
 export type Raw = Record<string, any>;
@@ -82,19 +83,26 @@ const trainTypes: Record<string, [string, string]> = {
   RapidLimitedExpress: ["快特", "Rapid Limited Express"],
   AirportRapidLimitedExpress: ["エアポート快特", "Airport Rapid Limited Express"],
   CommuterLimitedExpress: ["通勤特急", "Commuter Limited Express"],
+  SectionExpress: ["区間急行", "Section Express"], SectionSemiExpress: ["区間準急", "Section Semi Express"],
+  SectionRapid: ["区間快速", "Section Rapid"], AirportExpress: ["エアポート急行", "Airport Express"],
+  FLocal: ["各駅停車", "Local"], FExpress: ["急行", "F-Liner Express"], FLiner: ["Fライナー", "F-Liner"],
+  STrain: ["S-TRAIN", "S-TRAIN"], S_Train: ["S-TRAIN", "S-TRAIN"], THLiner: ["THライナー", "TH Liner"], TJLiner: ["TJライナー", "TJ Liner"],
 };
 
 /** Upgrade old offline data in memory without rewriting the user's cache. */
 export function enrichCachedTimetables(cache: Cache): Cache {
   return { ...cache, timetables: cache.timetables.map(table => ({
     ...table,
+    stationEnglish: normalizeStationEnglish(table.stationEnglish),
+    directionEnglish: normalizeStationEnglish(table.directionEnglish),
     stationCode: table.stationCode || externalStationCode(table.station),
     departures: table.departures.map(departure => {
-      const alias = trainTypes[departure.type];
+      const alias = trainTypes[short(departure.type)];
       const codes = departure.destinationCodes?.length ? departure.destinationCodes
         : departure.destinationStations?.length ? departure.destinationStations.map(externalStationCode).filter(Boolean)
         : [cachedDestinationCode(table.railway, departure.destination, departure.destinationEnglish)].filter(Boolean);
-      return { ...departure, destinationCodes: codes,
+      return { ...departure, destinationCodes: codes.length ? codes : [cachedDestinationCode(table.railway, departure.destination, departure.destinationEnglish)].filter(Boolean),
+        destinationEnglish: normalizeStationEnglish(departure.destinationEnglish),
         ...(alias ? { type: alias[0], typeEnglish: alias[1] } : {}),
       };
     }),
@@ -118,13 +126,13 @@ export function normalizeRailway(
   const shortStations = new Map([...stationRows.values()].map((row) => [short(id(row)), row]));
   const railwayRows = new Map(railways.map((row) => [id(row), row]));
   const directionRows = new Map(directions.map((row) => [id(row), row]));
-  const stationName = (sid: string) => title(stationRows.get(sid)?.["odpt:stationTitle"] ?? shortStations.get(short(sid))?.["odpt:stationTitle"], short(sid));
-  const stationEnglish = (sid: string) => stationRows.get(sid)?.["odpt:stationTitle"]?.en ?? shortStations.get(short(sid))?.["odpt:stationTitle"]?.en ?? short(sid);
+  const stationName = (sid: string) => title(stationRows.get(sid)?.["odpt:stationTitle"] ?? shortStations.get(short(sid))?.["odpt:stationTitle"], externalStationName(sid) || short(sid));
+  const stationEnglish = (sid: string) => normalizeStationEnglish(stationRows.get(sid)?.["odpt:stationTitle"]?.en ?? shortStations.get(short(sid))?.["odpt:stationTitle"]?.en ?? short(sid));
   const stationCode = (sid: string) => stationRows.get(sid)?.["odpt:stationCode"] || externalStationCode(sid);
   const directionTitle = (direction: string, railway: string, english = false) => {
     const raw = directionRows.get(direction)?.["odpt:railDirectionTitle"];
     const compassDirection = ["Inbound", "Outbound", "Northbound", "Southbound", "Eastbound", "Westbound"].includes(short(direction));
-    if (raw && !compassDirection) return english ? englishDirection(raw.en ?? short(direction)) : cleanDirection(title(raw, short(direction)));
+    if (raw && !compassDirection) return english ? normalizeStationEnglish(englishDirection(raw.en ?? short(direction))) : cleanDirection(title(raw, short(direction)));
     const namedStation = shortStations.get(short(direction));
     if (namedStation) return english ? namedStation["odpt:stationTitle"]?.en ?? short(direction) : title(namedStation["odpt:stationTitle"], short(direction));
     const line = railwayRows.get(railway);

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { stationAsset, railwayAsset, unknownAsset } from "../../shared/assets";
@@ -45,14 +45,43 @@ test("operator-qualified railway aliases preserve supplied line symbols and miss
     ["odpt.Railway:Odakyu.Enoshima", "/assets/Enoshima_Line/OE.png"],
     ["odpt.Railway:Odakyu.Tama", "/assets/Tama_Line/OT.png"],
     ["odpt.Railway:Keisei.Main", "/assets/Keisei_Line/KS.png"],
+    ["odpt.Railway:TokyoMetro.Ginza", "/assets/Ginza_Line/G.svg"],
   ]);
   for (const [railway, asset] of expected) {
     assert.equal(railwayAsset(railway), asset);
     const absolute = path.join(assetsDirectory, asset.slice("/assets/".length));
     assert.ok(readdirSync(path.dirname(absolute)).includes(path.basename(absolute)), "Filename case must match on Linux");
   }
-  for (const railway of ["JR-East.JobanLocal", "JR-East.ChuoSobuLocal", "SaitamaRailway.SaitamaRailway", "Keio.Keio", "Keikyu.Main", "TokyoMetro.Ginza", "Sotetsu.Main"]) {
+  for (const railway of ["JR-East.JobanLocal", "JR-East.ChuoSobuLocal", "SaitamaRailway.SaitamaRailway", "Keio.Keio", "Keikyu.Main", "Sotetsu.Main"]) {
     assert.equal(railwayAsset(`odpt.Railway:${railway}`), unknownAsset, railway);
   }
-  assert.equal(railwayAsset("odpt.Railway:TokyoMetro.Ginza", "G03"), unknownAsset);
+  assert.equal(railwayAsset("odpt.Railway:TokyoMetro.Ginza", "G03"), "/assets/Ginza_Line/G.svg");
+});
+
+test("Ginza's complete supplied numbering is distinct from Yokohama Green's G codes", () => {
+  const files = readdirSync(path.join(assetsDirectory, "Ginza_Line")).filter(file => file.startsWith("station_icon_"));
+  assert.equal(files.length, 19);
+  for (const file of files) {
+    const code = file.match(/station_icon_(g-\d+)/)![1];
+    assert.equal(decodeURI(stationAsset(code)), `/assets/Ginza_Line/${file}`);
+  }
+  assert.equal(stationAsset("G01", "odpt.Station:YokohamaMunicipal.Green.Nakayama"), "/assets/Green_Line/G-01.png");
+  assert.equal(stationAsset("G10", "odpt.Railway:YokohamaMunicipal.Green"), "/assets/Green_Line/G-10.png");
+  assert.equal(stationAsset("G11", "odpt.Railway:YokohamaMunicipal.Green"), unknownAsset);
+  assert.equal(stationAsset("G20", "odpt.Railway:TokyoMetro.Ginza"), unknownAsset);
+  const symbol = readFileSync(path.join(assetsDirectory, "Ginza_Line/G.svg"), "utf8");
+  assert.match(symbol, /clip-path="url\(#round\)"/);
+  assert.match(symbol, /data:image\/jpeg;base64,/);
+});
+
+test("known through-destination numbers without bitmap artwork have readable vector badges", () => {
+  for (const code of ["SH01", "SH02", "SO18", "SO37", "SO52"]) {
+    const badge = stationAsset(code);
+    assert.ok(badge.startsWith("data:image/svg+xml,"), code);
+    const svg = decodeURIComponent(badge.slice("data:image/svg+xml,".length));
+    assert.ok(svg.includes(`>${code.slice(0, 2)}</text>`));
+    assert.ok(svg.includes(`>${code.slice(2)}</text>`));
+  }
+  assert.equal(stationAsset("SH04"), unknownAsset);
+  assert.equal(stationAsset("SO99"), unknownAsset);
 });

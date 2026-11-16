@@ -69,7 +69,9 @@ export function contentSettings(value: Record<string, unknown>): Partial<Display
       return seg;
     });
     if (segments.reduce((n, s) => n + s.text.length, 0) > 2000 || new Set(segments.map(s => s.id)).size !== segments.length) throw new Error("スクロール文面は2000文字以内で指定してください。");
-    out.ticker = { speed: t.speed, segments };
+    if (t.size !== undefined && !["small", "medium", "large"].includes(String(t.size))) throw new Error("スクロール文面の文字サイズを確認してください。");
+    out.ticker = { speed: t.speed, segments,
+      ...(t.size === undefined ? {} : { size: t.size as "small" | "medium" | "large" }) };
     out.tickerText = segments.map(segment => segment.text).join("");
   }
   return out;

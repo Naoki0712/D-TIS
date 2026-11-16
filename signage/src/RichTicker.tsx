@@ -3,7 +3,7 @@ import type { TickerSettings } from "../../shared/display-settings";
 
 export function RichTicker({ text, ticker }: { text: string; ticker?: TickerSettings }) {
   const viewport = useRef<HTMLElement>(null), track = useRef<HTMLDivElement>(null);
-  const segments = ticker?.segments ?? [{ id: "plain", text }];
+  const segments = ticker?.segments.length ? ticker.segments : [{ id: "plain", text }];
   const signature = JSON.stringify(ticker ?? text);
   useEffect(() => {
     const box = viewport.current, line = track.current;
@@ -38,7 +38,7 @@ export function RichTicker({ text, ticker }: { text: string; ticker?: TickerSett
     return () => { cancelAnimationFrame(frame); resize.disconnect(); };
   }, [signature]);
   if (!segments.some(s => s.text)) return null;
-  return <footer ref={viewport} className="signage-ticker rich-ticker" aria-label="お知らせ" tabIndex={0}>
+  return <footer ref={viewport} className="signage-ticker rich-ticker" data-size={ticker?.size ?? "medium"} aria-label="お知らせ" tabIndex={0}>
     <div className="rich-ticker-track" ref={track}>{segments.map(segment => <span key={segment.id} data-id={segment.id} data-pause={segment.pauseSeconds ?? 0}
       className={`ticker-font-${segment.font ?? "inherit"}${segment.blink ? " ticker-blink" : ""}`}
       style={{ color: segment.color, fontWeight: segment.font === "mincho" ? 400 : segment.weight }}>{segment.text.replace(/\r?\n/g, "　")}</span>)}</div>

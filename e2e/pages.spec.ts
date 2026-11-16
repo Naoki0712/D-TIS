@@ -147,62 +147,64 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
   const controller = await controllerContext.newPage();
   try {
     await login(signage, `${baseURL}signage/`);
-    await expect(signage.locator(".app-facility")).toContainText("初期表示");
+    await expect(signage.getByRole("heading", { name: "表示する路線を追加してください" })).toBeVisible();
+    await expect(signage.locator(".app-facility")).toHaveCount(0);
     await login(controller, `${baseURL}controller/`);
-    await expect(controller.getByLabel("施設名", { exact: true })).toBeEnabled();
-    await controller.getByRole("button", { name: "デバイス設定" }).click();
+    await expect(controller.getByLabel("施設名", { exact: true })).toHaveCount(0);
+    await expect(controller.getByLabel("画面下部のスクロール文面")).toBeEditable();
+    await controller.getByRole("button", { name: "メイン画面のデバイス設定", exact: true }).click();
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toBeVisible({ timeout: 20000 });
     expect(joins.length).toBeGreaterThanOrEqual(2); expect(joins.every(Boolean)).toBe(true);
     await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     await controller.getByRole("button", { name: "＋ 路線を追加する" }).click();
     const routeDialog = controller.getByRole("dialog", { name: "路線を追加", exact: true });
-    await expect(routeDialog.getByRole("combobox", { name: "乗り物", exact: true })).toHaveValue("rail");
-    await expect(routeDialog.getByRole("combobox", { name: "路線・系統で絞り込み", exact: true }).locator("option")).toHaveCount(3);
-    await expect(routeDialog.getByRole("combobox", { name: "路線・系統で絞り込み", exact: true })).toContainText("銀座線");
+    await expect(routeDialog.getByRole("combobox", { name: "乗り物", exact: true })).toHaveCount(0);
+    await expect(routeDialog.getByRole("combobox", { name: "路線・系統で絞り込み", exact: true })).toHaveCount(0);
+    await expect(routeDialog.getByRole("tab", { name: "駅名から選ぶ", exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(routeDialog.getByRole("tab", { name: "マップから選ぶ", exact: true })).toBeVisible();
     await expect(routeDialog.getByRole("button", { name: /試験駅130/ })).toHaveCount(0);
     await routeDialog.getByRole("button", { name: /続きを表示/ }).click();
     await routeDialog.getByRole("button", { name: /試験駅130/ }).click();
     await routeDialog.getByLabel("路線の候補").getByRole("button", { name: "つくばエクスプレス" }).click();
     await expect(routeDialog.getByRole("button", { name: "追加する", exact: true })).toBeEnabled();
-    await routeDialog.getByRole("combobox", { name: "乗り物", exact: true }).selectOption("bus");
-    await expect(routeDialog.getByRole("button", { name: /試験バス停/ })).toBeVisible();
-    await routeDialog.getByRole("button", { name: "キャンセル" }).click();
+    await routeDialog.getByRole("button", { name: "追加する", exact: true }).click();
+    await expect(controller.getByLabel("登録した路線").locator(".route-card")).toHaveCount(1);
 
-    await controller.getByLabel("施設名", { exact: true }).fill("描画後に記録する駅");
     await controller.getByLabel("画面下部のスクロール文面").fill("足元にご注意ください");
     await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 1");
-    await expect(signage.locator(".app-facility")).toContainText("描画後に記録する駅");
-    expect(commits[0].source).toBe("signage"); expect(commits[0].rendered).toContain("描画後に記録する駅");
+    await expect(signage.locator(".app-facility")).toContainText("試験駅130駅");
+    expect(commits[0].source).toBe("signage"); expect(commits[0].rendered).toContain("試験駅130駅");
     expect(commits[0].rendered).toContain("足元にご注意ください"); expect(controllerReadsAfterCommit).toBeGreaterThan(0);
     expect(history).toHaveLength(1);
 
-    await controller.getByRole("button", { name: "デバイス設定" }).click();
+    await controller.getByRole("button", { name: "メイン画面のデバイス設定", exact: true }).click();
     await controller.getByRole("button", { name: "表示を停止", exact: true }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 2");
     await expect(signage.getByRole("heading", { name: "表示を停止しています" })).toBeVisible();
     expect(commits[1]).toMatchObject({ source: "signage", action: "display", paused: true });
     await controller.getByRole("button", { name: "表示を再開", exact: true }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 3");
-    await expect(signage.locator(".app-facility")).toContainText("描画後に記録する駅");
+    await expect(signage.locator(".app-facility")).toContainText("試験駅130駅");
+    await expect(signage.getByLabel("お知らせ", { exact: true })).toContainText("足元にご注意ください");
 
     await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     rejectNextCommit = true;
-    await controller.getByLabel("施設名", { exact: true }).fill("記録に失敗する変更");
+    await controller.getByLabel("画面下部のスクロール文面").fill("記録に失敗する変更");
     await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
     await expect(controller.locator(".feedback[role=status]")).toContainText("最新の設定を読み直してください");
-    await expect(signage.locator(".app-facility")).toContainText("描画後に記録する駅");
+    await expect(signage.getByLabel("お知らせ", { exact: true })).toContainText("足元にご注意ください");
     expect(record.revision).toBe(3); expect(history).toHaveLength(3);
     expect(commits[3].rendered).toContain("記録に失敗する変更");
 
     controller.on("dialog", dialog => dialog.accept());
-    await controller.getByRole("button", { name: "デバイス設定" }).click();
+    await controller.getByRole("button", { name: "メイン画面のデバイス設定", exact: true }).click();
     await controller.getByRole("button", { name: "Supabaseから再読込" }).click();
-    await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("描画後に記録する駅");
+    await expect(controller.getByLabel("画面下部のスクロール文面")).toHaveText("足元にご注意ください");
     await controller.getByRole("dialog", { name: "デバイス設定" }).getByRole("button", { name: "閉じる" }).click();
     await controller.reload();
-    await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("描画後に記録する駅");
-    await controller.getByRole("button", { name: "デバイス設定" }).click();
+    await expect(controller.getByLabel("画面下部のスクロール文面")).toHaveText("足元にご注意ください");
+    await controller.getByRole("button", { name: "メイン画面のデバイス設定", exact: true }).click();
     await controller.getByRole("button", { name: "両画面の交通情報を更新" }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 4");
     expect(record.refresh_version).toBe(1); expect(history).toHaveLength(4);
@@ -211,13 +213,13 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     // The database applied the operation but the HTTP response never arrived.
     // Signage must reconcile the exact command rather than restore stale state.
     loseNextCommitResponse = true;
-    await controller.getByLabel("施設名", { exact: true }).fill("応答が失われても確定した駅");
+    await controller.getByLabel("画面下部のスクロール文面").fill("応答が失われても確定した案内文");
     await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 5");
-    await expect(signage.locator(".app-facility")).toContainText("応答が失われても確定した駅");
-    await expect(controller.getByLabel("施設名", { exact: true })).toHaveValue("応答が失われても確定した駅");
+    await expect(signage.getByLabel("お知らせ", { exact: true })).toContainText("応答が失われても確定した案内文");
+    await expect(controller.getByLabel("画面下部のスクロール文面")).toHaveText("応答が失われても確定した案内文");
     expect(history).toHaveLength(5); expect(reconciliations).toContain("committed");
-    await controller.getByRole("button", { name: "デバイス設定" }).click();
+    await controller.getByRole("button", { name: "メイン画面のデバイス設定", exact: true }).click();
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toBeVisible({ timeout: 20000 });
     await expect(controller.getByRole("img", { name: /Signageが送信した画面/ })).toHaveJSProperty("naturalWidth", 1120);
     await signage.getByRole("button", { name: "映像で画面を共有" }).click();
@@ -248,6 +250,6 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     expect(await controller.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await settingsDialog.getByRole("button", { name: "閉じる" }).click();
     await controller.reload();
-    await expect(controller.getByRole("button", { name: /入口の画面/ })).toBeVisible();
+    await expect(controller.getByRole("button", { name: "入口の画面のデバイス設定", exact: true })).toBeVisible();
   } finally { await signageContext.close(); await controllerContext.close(); }
 });

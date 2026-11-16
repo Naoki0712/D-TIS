@@ -10,6 +10,7 @@ export type RailwayDefinition = {
 };
 
 export const railwayDefinitions: Record<string, RailwayDefinition> = {
+  Ginza: { symbol: "G", folder: "Ginza_Line", name: "東京メトロ銀座線", color: "#ff9500", symbolFile: "G.svg" },
   Marunouchi: { symbol: "M", folder: "Marunouchi_Line", name: "東京メトロ丸ノ内線", color: "#f62e36" },
   MarunouchiBranch: { symbol: "M", folder: "Marunouchi_Line", name: "東京メトロ丸ノ内線 方南町支線", color: "#f62e36" },
   Hibiya: { symbol: "H", folder: "Hibiya_Line", name: "東京メトロ日比谷線", color: "#b5b5ac", symbolFile: "H.svg" },
@@ -53,6 +54,13 @@ export const railwayDefinitions: Record<string, RailwayDefinition> = {
 };
 
 const railwayAliases: Record<string, string> = {
+  "Seibu.SeibuYurakucho": "Ikebukuro",
+  "Seibu.Yurakucho": "Ikebukuro",
+  "Seibu.SeibuChichibu": "Ikebukuro",
+  "Seibu.Chichibu": "Ikebukuro",
+  "Seibu.Sayama": "Ikebukuro",
+  "Tobu.TobuSkytree": "TobuSkytree",
+  "Tobu.Skytree": "TobuSkytree",
   "JR-East.JobanLocal": "JobanLocal",
   "JR-East.ChuoSobuLocal": "ChuoSobuLocal",
   "ToyoRapid.ToyoRapid": "ToyoRapid",

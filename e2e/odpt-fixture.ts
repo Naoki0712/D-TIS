@@ -7,9 +7,11 @@ const stations = Array.from({ length: 131 }, (_, index) => ({
   "odpt:railway": tx,
   "odpt:stationTitle": { ja: `試験駅${String(index).padStart(3, "0")}`, en: `Test ${index}` },
   "odpt:stationCode": `TX${index}`,
+  "geo:lat": 35.69 + index * 0.001,
+  "geo:long": 139.77 + index * 0.001,
 }));
 const ginzaStation = { "owl:sameAs": "odpt.Station:TokyoMetro.Ginza.Asakusa", "odpt:railway": ginza,
-  "odpt:stationTitle": { ja: "浅草", en: "Asakusa" }, "odpt:stationCode": "G19" };
+  "odpt:stationTitle": { ja: "浅草", en: "Asakusa" }, "odpt:stationCode": "G19", "geo:lat": 35.7118, "geo:long": 139.7984 };
 
 export function odptFixture(url: URL): object[] {
   const type = url.pathname.split("/").at(-1), operator = url.searchParams.get("odpt:operator");

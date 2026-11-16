@@ -11,16 +11,21 @@
  * https://www.toyokosoku.co.jp/station
  * https://www.s-rail.co.jp/ticket/line/
  * https://www.hokuso-railway.co.jp/railway/station/
+ * https://www.seiburailway.jp/railway/station/
+ * https://www.tobu.co.jp/railway/guide/line/tojo_line.html
+ * https://www.tokyu.co.jp/railway/map/
+ * https://www.sotetsu.co.jp/train/stations/
  */
-type Entry = { code: string; names: string[]; origins: readonly string[] };
+type Entry = { code: string; japanese: string; names: string[]; origins: readonly string[] };
 const stationCodes = new Map<string, Entry>();
 const entries: Entry[] = [];
 const normalizedName = (value: string) => value.normalize("NFKC").replace(/[\s\-・･〈〉（）()]/g, "").toLowerCase();
+const stationKey = (value: string) => value.normalize("NFKC").replace(/[\s\-]/g, "").toLowerCase();
 
 function register(line: string, origins: readonly string[], stations: Record<string, [string, string]>) {
   for (const [name, [code, japanese]] of Object.entries(stations)) {
-    const entry = { code, names: [normalizedName(name), normalizedName(japanese)], origins };
-    stationCodes.set(`odpt.Station:${line}.${name}`, entry);
+    const entry = { code, japanese, names: [normalizedName(name), normalizedName(japanese)], origins };
+    stationCodes.set(stationKey(`odpt.Station:${line}.${name}`), entry);
     entries.push(entry);
   }
 }
@@ -81,11 +86,62 @@ register("Keikyu.Zushi", asakusa, { ZushiHayama: ["KK53", "逗子・葉山"] });
 register("Hokuso.Hokuso", asakusa, { InzaiMakinohara: ["HS13", "印西牧の原"], ImbaNihonIdai: ["HS14", "印旛日本医大"] });
 
 // Preserve the established four through destinations, with qualified identities.
-register("Tokyu.DenEnToshi", ["TokyoMetro.Hanzomon"], { ChuoRinkan: ["DT27", "中央林間"], Nagatsuta: ["DT22", "長津田"] });
-register("Tobu.Isesaki", ["TokyoMetro.Hanzomon", "TokyoMetro.Hibiya"], { Kuki: ["TI02", "久喜"] });
-register("Tobu.Nikko", ["TokyoMetro.Hanzomon", "TokyoMetro.Hibiya"], { MinamiKurihashi: ["TN03", "南栗橋"] });
+register("Tokyu.DenEnToshi", ["TokyoMetro.Hanzomon"], {
+  Shibuya: ["DT01", "渋谷"], SangenJaya: ["DT03", "三軒茶屋"], FutakoTamagawa: ["DT07", "二子玉川"],
+  Mizonokuchi: ["DT10", "溝の口"], Saginuma: ["DT14", "鷺沼"], Azamino: ["DT16", "あざみ野"],
+  Aobadai: ["DT20", "青葉台"], Nagatsuta: ["DT22", "長津田"], ChuoRinkan: ["DT27", "中央林間"],
+});
+const fukutoshin = ["TokyoMetro.Fukutoshin", "TokyoMetro.Yurakucho"];
+register("Seibu.Ikebukuro", fukutoshin, {
+  Ikebukuro: ["SI01", "池袋"], Nerima: ["SI06", "練馬"], ShakujiiKoen: ["SI10", "石神井公園"],
+  Hoya: ["SI12", "保谷"], Hibarigaoka: ["SI13", "ひばりヶ丘"], Kiyose: ["SI15", "清瀬"],
+  Tokorozawa: ["SI17", "所沢"], NishiTokorozawa: ["SI18", "西所沢"], Kotesashi: ["SI19", "小手指"],
+  Irumashi: ["SI23", "入間市"], Hanno: ["SI26", "飯能"], HigashiHanno: ["SI27", "東飯能"], Agano: ["SI31", "吾野"],
+});
+for (const line of ["Seibu.SeibuYurakucho", "Seibu.Yurakucho"]) register(line, fukutoshin, {
+  KotakeMukaihara: ["SI37", "小竹向原"], ShinSakuradai: ["SI38", "新桜台"], Nerima: ["SI06", "練馬"],
+});
+for (const line of ["Seibu.SeibuChichibu", "Seibu.Chichibu"]) register(line, fukutoshin, { SeibuChichibu: ["SI36", "西武秩父"] });
+register("Seibu.Sayama", fukutoshin, { SeibukyujoMae: ["SI41", "西武球場前"] });
+register("Tobu.Tojo", fukutoshin, {
+  Ikebukuro: ["TJ01", "池袋"], KamiItabashi: ["TJ07", "上板橋"], Narimasu: ["TJ10", "成増"], Wakoshi: ["TJ11", "和光市"],
+  Shiki: ["TJ14", "志木"], KamiFukuoka: ["TJ19", "上福岡"], Kawagoe: ["TJ21", "川越"], Kawagoeshi: ["TJ22", "川越市"],
+  Sakado: ["TJ26", "坂戸"], ShinrinKoen: ["TJ30", "森林公園"], MusashiRanzan: ["TJ32", "武蔵嵐山"], Ogawamachi: ["TJ33", "小川町"], Yorii: ["TJ38", "寄居"],
+});
+const hanzomonHibiya = ["TokyoMetro.Hanzomon", "TokyoMetro.Hibiya"];
+const skytreeStations: Record<string, [string, string]> = {
+  Asakusa: ["TS01", "浅草"], TokyoSkytree: ["TS02", "とうきょうスカイツリー"], Oshiage: ["TS03", "押上"],
+  KitaSenju: ["TS09", "北千住"], Takenotsuka: ["TS14", "竹ノ塚"], KitaKoshigaya: ["TS21", "北越谷"],
+  KitaKasukabe: ["TS28", "北春日部"], TobuDobutsuKoen: ["TS30", "東武動物公園"],
+};
+for (const line of ["Tobu.Isesaki", "Tobu.TobuSkytree", "Tobu.Skytree"]) register(line, hanzomonHibiya, skytreeStations);
+register("Tobu.Isesaki", hanzomonHibiya, { Kuki: ["TI02", "久喜"], Tatebayashi: ["TI10", "館林"], Ota: ["TI18", "太田"], Isesaki: ["TI25", "伊勢崎"] });
+register("Tobu.Nikko", hanzomonHibiya, {
+  TobuDobutsuKoen: ["TS30", "東武動物公園"], SugitoTakanodai: ["TN01", "杉戸高野台"], MinamiKurihashi: ["TN03", "南栗橋"],
+  Kurihashi: ["TN04", "栗橋"], ShinTochigi: ["TN12", "新栃木"], TobuNikko: ["TN25", "東武日光"],
+});
+register("Tokyu.Toyoko", ["TokyoMetro.Fukutoshin", "TokyoMetro.Hibiya"], {
+  Shibuya: ["TY01", "渋谷"], NakaMeguro: ["TY03", "中目黒"], Jiyugaoka: ["TY07", "自由が丘"],
+  MusashiKosugi: ["TY11", "武蔵小杉"], Motosumiyoshi: ["TY12", "元住吉"], Hiyoshi: ["TY13", "日吉"], Kikuna: ["TY16", "菊名"], Yokohama: ["TY21", "横浜"],
+});
+register("YokohamaMinatomiraiRailway.Minatomirai", ["TokyoMetro.Fukutoshin"], {
+  ShinTakashima: ["MM02", "新高島"], Minatomirai: ["MM03", "みなとみらい"],
+  Bashamichi: ["MM04", "馬車道"], NihonOdori: ["MM05", "日本大通り"], MotomachiChukagai: ["MM06", "元町・中華街"],
+});
+register("YokohamaMinatomiraiRailway.Minatomirai", ["YokohamaMinatomiraiRailway.Minatomirai"], { Yokohama: ["MM01", "横浜"] });
+register("Tokyu.Meguro", ["TokyoMetro.Namboku", "Toei.Mita"], {
+  Meguro: ["MG01", "目黒"], Okusawa: ["MG07", "奥沢"], MusashiKosugi: ["MG11", "武蔵小杉"],
+  Motosumiyoshi: ["MG12", "元住吉"], Hiyoshi: ["MG13", "日吉"],
+});
+const tokyuThrough = ["TokyoMetro.Fukutoshin", "TokyoMetro.Namboku", "Toei.Mita", "Tokyu.Toyoko", "Tokyu.Meguro", "Tokyu.ShinYokohama"];
+register("Tokyu.ShinYokohama", tokyuThrough, { ShinYokohama: ["SH01", "新横浜"], ShinTsunashima: ["SH02", "新綱島"] });
+register("Tokyu.ShinYokohama", ["Tokyu.ShinYokohama"], { Hiyoshi: ["SH03", "日吉"] });
+register("Sotetsu.Main", tokyuThrough, { Nishiya: ["SO08", "西谷"], Futamatagawa: ["SO10", "二俣川"], Yamato: ["SO14", "大和"], Ebina: ["SO18", "海老名"] });
+register("Sotetsu.Izumino", tokyuThrough, { Shonandai: ["SO37", "湘南台"] });
+register("Sotetsu.ShinYokohama", ["Sotetsu.Main", "Sotetsu.Izumino"], { Nishiya: ["SO08", "西谷"], HazawaYokohamaKokudai: ["SO51", "羽沢横浜国大"], ShinYokohama: ["SO52", "新横浜"] });
 
-export const externalStationCode = (station: string): string => stationCodes.get(station)?.code ?? "";
+export const externalStationCode = (station: string): string => stationCodes.get(stationKey(station))?.code ?? "";
+export const externalStationName = (station: string): string => stationCodes.get(stationKey(station))?.japanese ?? "";
 
 /** Old offline caches have destination names but do not retain their ODPT IDs. */
 export function cachedDestinationCode(railway: string, japanese: string, english: string): string {
