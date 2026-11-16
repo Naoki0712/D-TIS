@@ -26,6 +26,7 @@ export interface Departure {
   destination: string;
   destinationEnglish: string;
   destinationCodes: string[];
+  destinationStations?: string[];
   trainNumber: string | null;
   note: string | null;
   carCount?: number;

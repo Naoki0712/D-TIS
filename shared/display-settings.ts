@@ -11,7 +11,8 @@ export interface TravelSettings {
 }
 export interface MediaItem { id: string; kind: "image" | "video"; url: string; alt: string; durationSeconds: number }
 export interface TickerSegment { id: string; text: string; color?: string; weight?: 400 | 700; font?: FontPreset; blink?: boolean; pauseSeconds?: number }
-export interface TickerSettings { speed: number; segments: TickerSegment[] }
+export type TickerSize = "small" | "medium" | "large";
+export interface TickerSettings { speed: number; size?: TickerSize; segments: TickerSegment[] }
 
 export interface RouteDisplaySettings {
   directionDisplayMode?: DirectionDisplayMode;

@@ -1,11 +1,31 @@
 .signage-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.signage-content.with-media { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; }
+.signage-content.with-media { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: clamp(8px, 1vw, 20px); }
 .signage-content.media-only { display: flex; }
 .signage-content.media-only .departure-pages,.signage-content.media-only > .odpt-empty { display: none; }
-.signage-content > .departure-pages { min-width: 0; }
+.signage-content > .departure-pages { min-width: 0; min-height: 0; container-type: inline-size; }
+.signage .app-facility span, .signage .route-name p, .signage .direction-name p { font-size: var(--display-secondary); line-height: 1.35; }
+.signage .app-facility { padding-block: 8px; }
+.departure-board { --board-number: clamp(46px, 8.4cqw, 180px); --board-destination: clamp(32px, 6cqw, 130px); --board-heading: clamp(23px, 2.9cqw, 58px); --board-type: clamp(22px, 3.5cqw, 70px); --board-icon: clamp(52px, 8.6cqw, 180px); --board-secondary: clamp(15px, 1.9cqw, 38px); padding-inline: clamp(12px, 2.2cqw, 42px); }
+.departure-board .departure-list article { gap: clamp(10px, 1.7cqw, 36px); }
+.departure-board .train-type.with-car-count { display: flex; gap: 3px; }
+.departure-board .train-type.with-car-count .car-count { font-size: max(12px, calc(var(--board-secondary) * .75)); }
+.departure-board .route-heading { grid-template-columns: clamp(48px, 6cqw, 120px) minmax(0, 1fr) minmax(0, 1fr); gap: clamp(12px, 2cqw, 38px); }
+.departure-board .route-heading.hide-line-name, .departure-board .route-heading.hide-direction { grid-template-columns: clamp(48px, 6cqw, 120px) minmax(0, 1fr); }
+.departure-board .route-heading.hide-line-name.hide-direction { grid-template-columns: clamp(48px, 6cqw, 120px); }
+.combined .departure-board { --board-number: clamp(42px, min(7cqw, calc(var(--board-unit, 1vh) * 9.5)), 120px); --board-destination: clamp(28px, min(5cqw, calc(var(--board-unit, 1vh) * 7)), 90px); --board-heading: clamp(20px, min(2.7cqw, calc(var(--board-unit, 1vh) * 3.5)), 44px); --board-type: clamp(20px, min(3cqw, calc(var(--board-unit, 1vh) * 4.1)), 50px); --board-icon: clamp(48px, min(6.5cqw, calc(var(--board-unit, 1vh) * 10)), 120px); --board-secondary: clamp(14px, min(1.7cqw, calc(var(--board-unit, 1vh) * 2.2)), 30px); }
+.combined .departure-list article { padding-block:clamp(4px, calc(var(--board-unit, 1vh) * .6), 10px); }
+.combined .departure-board .route-heading { grid-template-columns: clamp(44px, min(5cqw, calc(var(--board-unit, 1vh) * 8)), 88px) minmax(0, 1fr) minmax(0, 1fr); }
+.combined .departure-board .route-heading.hide-line-name, .combined .departure-board .route-heading.hide-direction { grid-template-columns: clamp(44px, min(5cqw, calc(var(--board-unit, 1vh) * 8)), 88px) minmax(0, 1fr); }
+.combined .departure-board .route-heading.hide-line-name.hide-direction { grid-template-columns: clamp(44px, min(5cqw, calc(var(--board-unit, 1vh) * 8)), 88px); }
 .signage-media { min-width: 0; min-height: 160px; display: grid; place-items: center; overflow: hidden; background: #111; }
 .signage-media[hidden] { display: none; }
 .signage-media img,.signage-media video { display: block; width: 100%; height: 100%; max-height: calc(100svh - 160px); object-fit: contain; }
+@media(min-width:801px){
+  .signage { height:100svh; }
+  .signage-content.with-media { grid-template-rows:minmax(0,1fr); }
+  .signage-content.media-only .signage-media { flex:1; min-height:0; }
+  .signage-media img,.signage-media video { min-height:0; max-height:100%; }
+}
 .travel-estimate { margin: 8px 22px; font-size: clamp(14px,1.3vw,20px); color: #d4d4d4; }
 .departure-list[data-transition] > article { animation-duration: .65s; animation-timing-function: ease-out; backface-visibility: hidden; }
 .departure-list[data-transition="slide"] > article { animation-name: departure-slide; }
@@ -19,9 +39,22 @@
 @keyframes departure-flap { 0% { transform: perspective(500px) rotateX(-90deg); filter: brightness(.3); } 50% { transform: perspective(500px) rotateX(18deg); filter: brightness(1.3); } 100% { transform: none; filter:none; } }
 @keyframes departure-zoom { from { opacity:0; transform:scale(.85); } to { opacity:1; transform:scale(1); } }
 .rich-ticker { position: relative; flex: none; width: 100%; overflow: hidden; }
-.rich-ticker-track { display: inline-block; width: max-content; white-space: nowrap; will-change: transform; padding: 14px 0; }
+.rich-ticker-track { display: inline-flex; flex: none; align-items: baseline; width: max-content; white-space: nowrap; will-change: transform; line-height: 1.4; }
 .rich-ticker-track > span { display: inline-block; position: relative; white-space: pre; }
 .ticker-blink { animation: ticker-blink 1.2s step-end infinite; }
 @keyframes ticker-blink { 50% { opacity:.15; } }
 @media(max-width:800px){.signage-content.with-media{grid-template-columns:1fr}.signage-media{max-height:30svh}}
+@media(max-width:720px){
+  .departure-board, .combined .departure-board { --board-number: clamp(48px, 14cqw, 100px); --board-destination: clamp(30px, 8cqw, 60px); --board-heading: clamp(22px, 5cqw, 34px); --board-type: clamp(22px, 5cqw, 36px); --board-icon: 56px; }
+  .departure-board .route-heading, .combined .departure-board .route-heading { grid-template-columns:48px minmax(0,1fr); }
+  .departure-list article > time { grid-row:1; }
+  .departure-list article .train-type { grid-row:1; }
+  .departure-list article > .destination-code, .departure-list article > .destination-code-placeholder { grid-column:1; grid-row:2; }
+  .departure-list article > .destination-name { grid-column:2 / -1; grid-row:2; }
+}
 @media(prefers-reduced-motion:reduce){.departure-list[data-transition] > article,.departure-list[data-transition] > article > *,.ticker-blink{animation:none!important}.rich-ticker-track{width:auto;white-space:normal;transform:none!important}.rich-ticker-track > span{white-space:pre-wrap}}
+@media(prefers-reduced-motion:reduce){.rich-ticker{height:auto;min-height:var(--ticker-height);padding:8px 16px;overflow:visible}.rich-ticker-track{display:block}}
+@media(hover:hover){
+  .signage-sharing, body:has(.signage) .cloud-account { opacity:0; transition:opacity .15s; }
+  .signage-sharing:hover, .signage-sharing:focus-within, body:has(.signage) .cloud-account:hover, body:has(.signage) .cloud-account:focus-within, body:has(.signage) .cloud-account[open] { opacity:1; }
+}

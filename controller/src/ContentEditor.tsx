@@ -1,43 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import type { DisplaySettings, TickerSegment, MediaItem, CustomFont } from "../../shared/display-settings";
+import type { DisplaySettings, MediaItem, CustomFont } from "../../shared/display-settings";
 import { uploadAsset } from "../../shared/media-storage";
 import { assetUrl } from "../../shared/content-settings";
 import { useDisplayFont } from "../../shared/fonts";
+import { TickerEditor } from "./TickerEditor";
 
 export function ContentEditor({ settings, onChange, disabled }: { settings: DisplaySettings; onChange(settings: DisplaySettings): void; disabled: boolean }) {
   const [busy, setBusy] = useState(false), [notice, setNotice] = useState("");
   const [mediaUrl, setMediaUrl] = useState(""), [mediaKind, setMediaKind] = useState<"image" | "video">("image");
   const [fontUrl, setFontUrl] = useState(""), [fontName, setFontName] = useState("");
-  const [selection, setSelection] = useState({ start: 0, end: 0 });
-  const [color, setColor] = useState("#ffffff"), [weight, setWeight] = useState<400 | 700>(700);
-  const [font, setFont] = useState<"gothic" | "mincho" | "custom">("gothic"), [blink, setBlink] = useState(false), [pause, setPause] = useState(0);
   const alive = useRef(true); useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
   const fontStyle = useDisplayFont(settings.appearance);
   const locked = disabled || busy;
   const latest = useRef({ settings, onChange }); latest.current = { settings, onChange };
   const update = (patch: Partial<DisplaySettings>) => latest.current.onChange({ ...latest.current.settings, ...patch });
   const travel = settings.travel ?? { mode: "off" as const, minutes: 0, walkingSpeedKmh: 4.8, bufferMinutes: 0 };
-  const segments: TickerSegment[] = settings.ticker?.segments ?? [{ id: "initial", text: settings.tickerText }];
-  const tickerText = segments.map(s => s.text).join("");
-  function setSegments(next: TickerSegment[]) {
-    update({ tickerText: next.map(s => s.text).join(""), ticker: { speed: settings.ticker?.speed ?? 70, segments: next } });
-  }
-  function decorate() {
-    if (selection.end <= selection.start) { setNotice("文面から装飾したい文字を選択してください。"); return; }
-    let offset = 0;
-    const next = segments.flatMap(segment => {
-      const start = Math.max(0, selection.start - offset), end = Math.min(segment.text.length, selection.end - offset);
-      offset += segment.text.length;
-      if (end <= start) return [segment];
-      const rows: TickerSegment[] = [];
-      if (start > 0) rows.push({ ...segment, id: crypto.randomUUID(), text: segment.text.slice(0, start), pauseSeconds: 0 });
-      rows.push({ ...segment, id: crypto.randomUUID(), text: segment.text.slice(start, end), color, weight: font === "mincho" ? 400 : weight, font, blink, pauseSeconds: pause });
-      if (end < segment.text.length) rows.push({ ...segment, id: crypto.randomUUID(), text: segment.text.slice(end) });
-      return rows;
-    });
-    if (next.length > 200) { setNotice("装飾は200区間まで設定できます。不要な装飾を解除してください。"); return; }
-    setSegments(next); setNotice("選択した文字に装飾を設定しました。");
-  }
   async function addFile(file: File | undefined, kind: "image" | "video" | "font") {
     if (!file || locked) return; setBusy(true); setNotice("アップロードしています…");
     try {
@@ -104,16 +81,7 @@ export function ContentEditor({ settings, onChange, disabled }: { settings: Disp
       <details><summary>URLから写真・映像を追加</summary><label>種類<select value={mediaKind} onChange={e => setMediaKind(e.target.value as typeof mediaKind)}><option value="image">写真</option><option value="video">映像</option></select></label><label>ファイルのURL<input type="url" value={mediaUrl} onChange={e => setMediaUrl(e.target.value)} placeholder="https://…/photo.jpg" /></label><button type="button" disabled={!assetUrl(mediaUrl)} onClick={() => addMedia(mediaUrl, mediaKind)}>URLから追加</button><p className="muted">動画共有サイトのページではなく、画像・動画ファイルのURLを指定してください。</p></details>
       <div className="media-items">{settings.media?.map((item, index) => <article key={item.id}><h3>{index + 1}. {item.kind === "image" ? "写真" : "映像"}</h3><label>説明<input value={item.alt} maxLength={200} onChange={e => editMedia(item.id, { alt: e.target.value })} /></label><label>表示する秒数<input type="number" min={3} max={300} value={item.durationSeconds} onChange={e => editMedia(item.id, { durationSeconds: Number(e.target.value) })} /></label><div className="studio-buttons"><button type="button" disabled={index === 0} onClick={() => { const items = [...settings.media!]; [items[index - 1], items[index]] = [items[index], items[index - 1]]; update({ media: items }); }}>前へ</button><button type="button" onClick={() => update({ media: settings.media?.filter(m => m.id !== item.id) })}>表示から削除</button></div></article>)}</div>
     </fieldset></section>
-    <section className="studio-section"><h2>スクロール文面</h2><fieldset disabled={locked}>
-      <label>画面下部のスクロール文面<textarea rows={4} maxLength={2000} value={tickerText} onSelect={e => setSelection({ start: e.currentTarget.selectionStart, end: e.currentTarget.selectionEnd })} onChange={e => setSegments([{ id: crypto.randomUUID(), text: e.target.value }])} /></label>
-      <p className="muted">文面を書いてから文字を選択し、下の設定を適用します。文全体を書き換えると装飾はリセットされます。</p>
-      <label>文全体のスクロール速度（{settings.ticker?.speed ?? 70}px/秒）<input type="range" min={10} max={300} value={settings.ticker?.speed ?? 70} onChange={e => update({ ticker: { speed: Number(e.target.value), segments }, tickerText })} /></label>
-      <div className="studio-grid"><label>文字色<input type="color" value={color} onChange={e => setColor(e.target.value)} /></label><label>文字の太さ<select value={font === "mincho" ? 400 : weight} disabled={font === "mincho"} onChange={e => setWeight(Number(e.target.value) as 400 | 700)}><option value={400}>Regular</option><option value={700}>Bold</option></select></label><label>文字の書体<select value={font} onChange={e => setFont(e.target.value as typeof font)}><option value="gothic">ゴシック体</option><option value="mincho">明朝体 Regular</option><option value="custom" disabled={!settings.appearance?.customFont}>追加したフォント</option></select></label><label>区間末尾で停止する秒数<input type="number" min={0} max={60} value={pause} onChange={e => setPause(Number(e.target.value))} /></label></div>
-      <label className="studio-check"><input type="checkbox" checked={blink} onChange={e => setBlink(e.target.checked)} />選択した文字を点滅</label>
-      <button type="button" onClick={decorate}>選択した文字に適用</button>
-      <div className="ticker-edit-preview" style={fontStyle} aria-label="スクロール文面の装飾プレビュー">{segments.map(segment => <span key={segment.id} className={`ticker-font-${segment.font ?? "gothic"}${segment.blink ? " ticker-blink" : ""}`} style={{ color: segment.color, fontWeight: segment.font === "mincho" ? 400 : segment.weight }}>{segment.text}{!!segment.pauseSeconds && <small> ⏸{segment.pauseSeconds}秒 </small>}</span>)}</div>
-      <button type="button" onClick={() => setSegments([{ id: crypto.randomUUID(), text: tickerText }])}>文字の装飾をすべて解除</button>
-    </fieldset></section>
+    <TickerEditor settings={settings} disabled={locked} onChange={onChange} />
     {notice && <p className="feedback" role="status">{notice}</p>}
   </div>;
 }

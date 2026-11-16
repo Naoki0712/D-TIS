@@ -11,7 +11,7 @@ SignageとControllerを静的なウェブアプリとして公開します。実
 5. フォルダーをGitHubへ追加し、**Settings → Pages → Source → GitHub Actions**を選びます。`main`へpushすると、同梱のワークフローがテスト・ビルド・公開を実行します。詳細は[`docs/github-pages.md`](docs/github-pages.md)を参照してください。
 6. このD-TIS用の接続情報は組み込み済みです。別のSupabaseプロジェクトへ配置する場合だけ、管理者がGitHub Repository variablesの`VITE_SUPABASE_URL`と`VITE_SUPABASE_PUBLISHABLE_KEY`を設定して公開します。利用者によるURLやキーの入力は不要です。
 7. 公開された`/controller/`で**新規登録**します。メール確認が有効な場合は確認メールを開き、`/signage/`と`/controller/`の両方に同じアカウントでログインします。利用者ごとに自分のSignageだけが表示されます。
-8. Controllerの**Signageを追加**で表示用端末ごとの専用URLを発行します。Signageを表示したまま、一覧で操作先を選び、路線・施設名・写真・映像・スクロール文面などを設定して**Signageに反映して記録**を選びます。右上の**デバイス設定**に、ライブ画面・表示停止／再開・最終応答・デバイス名・再読込をまとめています。書体、移動時間、文字装飾を含む詳しい使い方は[`docs/signage-studio.md`](docs/signage-studio.md)を参照してください。
+8. Controller右上の**＋**から表示用端末ごとのSignageを追加し、専用URLを発行します。Signageを表示したまま、右上の本棚型一覧で操作先を選び、路線・写真・映像・スクロール文面などを設定して**Signageに反映して記録**を選びます。路線は駅名検索と地図から追加でき、Signage上部には表示中の駅名を表示します。各Signageの歯車ボタンに、ライブ画面・表示停止／再開・最終応答・デバイス名・再読込をまとめています。文字サイズ・速度を3段階で選べる文面エディターなど、詳しい使い方は[`docs/signage-studio.md`](docs/signage-studio.md)を参照してください。
 
 SupabaseのProject URLとpublishable keyは、`shared/public-config.ts`の公開既定値でも指定できます。GitHub Repository variablesが優先されます。ブラウザーへ渡すのは公開用のキーだけです。`service_role`、`sb_secret_…`、データベースパスワードを使わないでください。
 

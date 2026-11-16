@@ -15,11 +15,12 @@ export function appUrl(app: "signage" | "controller") {
       : new URL(sitePath("signage/"), window.location.origin).href);
 }
 
-export function AppHeader({ product, children, facilityName, facilitySecondary }: {
+export function AppHeader({ product, children, facilityName, facilitySecondary, facilityLabel = "施設名" }: {
   product: "Signage" | "Controller";
   children?: ReactNode;
   facilityName?: string;
   facilitySecondary?: string;
+  facilityLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -53,7 +54,7 @@ export function AppHeader({ product, children, facilityName, facilitySecondary }
         <a href={appUrl(target === "Signage" ? "signage" : "controller")}>{target}</a>
       </nav>
     </div>
-    {facilityName && <div className="app-facility" aria-label="施設名">
+    {facilityName && <div className="app-facility" aria-label={facilityLabel}>
       <strong>{facilityName}</strong>
       {facilitySecondary && <span>{facilitySecondary}</span>}
     </div>}

@@ -1,0 +1,25 @@
+.station-picker-tabs { display: flex; gap: 8px; margin: 18px 0; }
+.route-dialog .station-picker-tabs button { flex: 1; padding: 10px 14px; border: 1px solid #60606a; border-radius: 10px; color: #e9e5f3; background: #29292d; }
+.route-dialog .station-picker-tabs button[aria-selected="true"] { border-color: #c0a8ff; background: #443650; color: #fff; }
+.station-map-help, .station-map-caption { color: #c7c3d0; font-size: 14px; line-height: 1.65; }
+.station-map { position: relative; height: clamp(280px, 42svh, 420px); overflow: hidden; border: 1px solid #73737c; border-radius: 12px; background: #e5e9e8; cursor: grab; touch-action: none; isolation: isolate; }
+.station-map:focus-visible { outline: 3px solid #c0a8ff; outline-offset: 3px; }
+.station-map.dragging { cursor: grabbing; }
+.station-map-tiles { position: absolute; inset: 0; pointer-events: none; }
+.station-map-tiles img { position: absolute; width: 256px; height: 256px; max-width: none; opacity: .8; }
+.route-dialog .station-map-pin { position: absolute; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; min-height: 36px; margin: -18px 0 0 -18px; padding: 0; border: 0; border-radius: 50%; color: #15151c; background: transparent; cursor: pointer; z-index: 1; }
+.station-map-dot { display: block; width: 14px; height: 14px; flex-shrink: 0; border: 3px solid var(--station-color, #334658); border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #fff, 0 1px 4px #0008; }
+.station-map-label { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); max-width: 160px; padding: 2px 5px; border-radius: 3px; color: #15151c; background: #fffffff0; font-size: 12px; line-height: 1.3; white-space: nowrap; pointer-events: none; box-shadow: 0 1px 2px #0002; }
+.route-dialog .station-map-pin:hover, .route-dialog .station-map-pin:focus-visible, .route-dialog .station-map-pin.selected { z-index: 2; outline: 3px solid #674292; outline-offset: -3px; background: #e2ceffb3; }
+.station-map-pin.selected .station-map-label { color: #fff; background: #55317c; font-size: 14px; }
+.station-map-controls { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 4px; z-index: 3; }
+.route-dialog .station-map-controls button { display: grid; place-items: center; width: 42px; height: 42px; min-height: 42px; padding: 0; border: 1px solid #9b9ca3; border-radius: 7px; color: #22232c; background: #fff; font-size: 22px; box-shadow: 0 1px 4px #0002; }
+.route-dialog .station-map-controls .station-map-fit { font-size: 13px; }
+.route-dialog .station-map-controls button:disabled { opacity: .5; }
+.station-map-attribution { position: absolute; right: 0; bottom: 0; z-index: 3; padding: 3px 6px; color: #24445d; background: #fffffff2; font-size: 11px; line-height: 1.4; }
+.station-map-caption span { display: block; }
+.station-map-empty { margin: 16px 0; padding: 24px; border: 1px dashed #73737c; border-radius: 12px; color: #d4cddd; line-height: 1.6; }
+.station-choice-summary { margin: 18px 0 10px; padding: 12px 14px; border-left: 4px solid #b9a3ff; border-radius: 6px; color: #eee6ff; background: #38313f; }
+.station-choice-summary strong { margin-right: 10px; font-size: 20px; }
+.station-choice-summary span { font-size: 14px; line-height: 1.6; }
+@media (max-width: 500px) { .station-picker-tabs { gap: 5px; } .route-dialog .station-picker-tabs button { padding: 9px 6px; font-size: 15px; } }

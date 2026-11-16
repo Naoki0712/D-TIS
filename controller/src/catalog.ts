@@ -9,7 +9,7 @@ export function stationChoices(lines: CatalogLine[], query = ""): StationChoice[
   const search = searchable(query);
   for (const line of lines) for (const station of line.stations) {
     const existing = choices.get(station.name) ?? { name: station.name, matches: [] };
-    existing.matches.push({ line, station });
+    if (!existing.matches.some(match => match.line.id === line.id && match.station.id === station.id)) existing.matches.push({ line, station });
     choices.set(station.name, existing);
   }
   return [...choices.values()].filter(choice => !search || searchable(choice.name).includes(search)
