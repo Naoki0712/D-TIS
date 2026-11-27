@@ -66,7 +66,7 @@ export function displayPages(selected: SelectedRoute[], mode: Facility["directio
   });
 }
 
-export function nextDepartures(table: Timetable | undefined, now: Date, leadMinutes = 0): Departure[] {
+export function nextDepartures(table: Timetable | undefined, now: Date, leadMinutes = 0, delayMinutes = 0): Departure[] {
   const minutes = now.getHours() * 60 + now.getMinutes();
   // Add the travel threshold without changing the service date/calendar above.
   const current = (minutes < 180 ? minutes + 1440 : minutes) + now.getSeconds() / 60
@@ -77,6 +77,7 @@ export function nextDepartures(table: Timetable | undefined, now: Date, leadMinu
     if (!match || Number(match[2]) > 59) return [];
     let absoluteMinutes = Number(match[1]) * 60 + Number(match[2]);
     if (absoluteMinutes < 180) absoluteMinutes += 1440;
+    absoluteMinutes += departure.delayMinutes ?? delayMinutes;
     const key = `${departure.time}|${departure.trainNumber}|${departure.destination}|${departure.type}`;
     if (absoluteMinutes < current || unique.has(key)) return [];
     unique.add(key);

@@ -1,20 +1,10 @@
 (() => {
   'use strict';
-  const menu = document.querySelector('.menu-button');
-  const nav = document.querySelector('#main-menu');
-  const closeMenu = () => {
-    nav.classList.remove('open');
-    menu.setAttribute('aria-expanded', 'false');
-    menu.setAttribute('aria-label', 'メニューを開く');
-  };
-  menu.addEventListener('click', () => {
-    const open = menu.getAttribute('aria-expanded') !== 'true';
-    menu.setAttribute('aria-expanded', String(open));
-    menu.setAttribute('aria-label', open ? 'メニューを閉じる' : 'メニューを開く');
-    nav.classList.toggle('open', open);
-  });
-  nav.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
-  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  const sectionLinks = [...document.querySelectorAll('.portal-section-menu a')];
+  const menuSections = sectionLinks.map(link => document.querySelector(link.hash));
+  const syncHeaderHeight = () => document.documentElement.style.setProperty('--header', `${document.querySelector('.site-header').offsetHeight}px`);
+  syncHeaderHeight();
+  new ResizeObserver(syncHeaderHeight).observe(document.querySelector('.site-header'));
 
   const chapters = [...document.querySelectorAll('.story-chapter')];
   const chapterLinks = [...document.querySelectorAll('.story-nav a')];
@@ -26,6 +16,14 @@
   function update() {
     scheduled = false;
     const header = document.querySelector('.site-header').offsetHeight;
+    let activeSection = 0;
+    menuSections.forEach((section, index) => {
+      if (section && section.getBoundingClientRect().top <= header + 32) activeSection = index;
+    });
+    sectionLinks.forEach((link, index) => {
+      if (index === activeSection) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    });
     const toolbar = document.querySelector('.story-toolbar').offsetHeight;
     let current = -1;
     chapters.forEach((chapter, index) => {

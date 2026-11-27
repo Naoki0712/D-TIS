@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { sharedLogo } from "./assets";
 import { sitePath } from "./app-urls";
 
@@ -15,49 +15,54 @@ export function appUrl(app: "signage" | "controller") {
       : new URL(sitePath("signage/"), window.location.origin).href);
 }
 
-export function AppHeader({ product, children, facilityName, facilitySecondary, facilityLabel = "施設名" }: {
+export function AppHeader({ product, children, collapsible = false }: {
   product: "Signage" | "Controller";
   children?: ReactNode;
-  facilityName?: string;
-  facilitySecondary?: string;
-  facilityLabel?: string;
+  collapsible?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const menu = useRef<HTMLDivElement>(null);
-  const button = useRef<HTMLButtonElement>(null);
-  const target = product === "Signage" ? "Controller" : "Signage";
+  const [collapsed, setCollapsed] = useState(false);
+  const menuId = useId();
+  const header = useRef<HTMLElement>(null);
+  const toggle = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!open) return;
-    const outside = (event: PointerEvent) => {
-      if (!menu.current?.contains(event.target as Node)) setOpen(false);
+    if (!collapsible || collapsed) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const close = () => {
+      if (header.current?.contains(document.activeElement)) toggle.current?.focus({ preventScroll: true });
+      setCollapsed(true);
     };
-    const escape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") { setOpen(false); button.current?.focus(); }
+    const reset = () => {
+      clearTimeout(timer);
+      timer = setTimeout(close, 5000);
     };
-    document.addEventListener("pointerdown", outside);
-    document.addEventListener("keydown", escape);
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+      else reset();
+    };
+    const events = ["pointerdown", "pointermove", "wheel", "focusin"] as const;
+    events.forEach(event => document.addEventListener(event, reset, { passive: true }));
+    document.addEventListener("keydown", keydown);
+    reset();
     return () => {
-      document.removeEventListener("pointerdown", outside);
-      document.removeEventListener("keydown", escape);
+      clearTimeout(timer);
+      events.forEach(event => document.removeEventListener(event, reset));
+      document.removeEventListener("keydown", keydown);
     };
-  }, [open]);
-  return <header className={`app-header${facilityName ? " app-header-with-facility" : ""}`}>
-    <div className="app-logo"><img src={sharedLogo} alt="D-TIS" /></div>
-    <div className="app-navigation" ref={menu} onBlur={(event) => {
-      if (!event.currentTarget.contains(event.relatedTarget as Node)) setOpen(false);
-    }}>
-      <button className="app-product" type="button" ref={button} aria-expanded={open}
-        aria-controls="app-navigation-links" onClick={() => setOpen(value => !value)}>
-        {product}<span aria-hidden="true" />
-      </button>
-      <nav className="app-dropdown" id="app-navigation-links" aria-label="画面切り替え" hidden={!open}>
-        <a href={appUrl(target === "Signage" ? "signage" : "controller")}>{target}</a>
+  }, [collapsible, collapsed]);
+  return <div className={`app-menu-shell${collapsible ? " app-menu-overlay" : ""}`} data-collapsed={collapsed}>
+    <header id={menuId} ref={header} className="app-header d-tis-menu" aria-hidden={collapsed || undefined} inert={collapsed}>
+      <a className="d-tis-brand" href={sitePath("")} aria-label="D-TIS ポータルサイト">
+        <img src={sharedLogo} alt="D-TIS" width="150" height="75" />
+      </a>
+      <nav className="d-tis-products" aria-label="ページ切替">
+        <a href={sitePath("")}>ポータルサイト</a>
+        <a href={appUrl("signage")} aria-current={product === "Signage" ? "page" : undefined}>Signage</a>
+        <a href={appUrl("controller")} aria-current={product === "Controller" ? "page" : undefined}>Controller</a>
       </nav>
-    </div>
-    {facilityName && <div className="app-facility" aria-label={facilityLabel}>
-      <strong>{facilityName}</strong>
-      {facilitySecondary && <span>{facilitySecondary}</span>}
-    </div>}
-    {children}
-  </header>;
+      <div className="d-tis-secondary">{children}</div>
+    </header>
+    {collapsible && <button ref={toggle} className="d-tis-menu-toggle" type="button" aria-expanded={!collapsed}
+      aria-controls={menuId} aria-label={collapsed ? "メニューを表示" : "メニューを隠す"}
+      onClick={() => setCollapsed(value => !value)}><span aria-hidden="true" /></button>}
+  </div>;
 }

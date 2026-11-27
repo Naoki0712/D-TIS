@@ -9,6 +9,10 @@ import { mergeDeviceList, mergeDeviceSnapshot } from "../../shared/cloud-view-st
 import { effectiveDisplaySettings, selectOutput, withOutputSettings, type FacilitySettings } from "../../shared/display-settings";
 import { RouteEditor } from "./RouteEditor";
 import { ContentEditor } from "./ContentEditor";
+import { LayoutEditor } from "./LayoutEditor";
+import { ServiceEditor } from "./ServiceEditor";
+import { initialLayout } from "../../shared/signage-layout";
+import type { OdptData } from "../../signage/src/types";
 import type { CatalogLine } from "./catalog";
 import "@fontsource/inter/700.css";
 import "../../shared/theme.css";
@@ -18,6 +22,8 @@ import "./connections.css";
 import "./equipment.css";
 import "../../shared/fonts.css";
 import "./studio.css";
+import "../../shared/menu.css";
+import "./workspace.css";
 
 document.documentElement.classList.toggle("windows", navigator.userAgent.includes("Windows"));
 const message = (error: unknown) => error instanceof Error ? error.message : String(error);
@@ -47,9 +53,9 @@ function App() {
   const [createdUrl, setCreatedUrl] = useState("");
   const observed = useRef(new Map<string, { stamp: string; online: boolean }>());
   const initialized = useRef(false);
-  const [deviceMenuOpen, setDeviceMenuOpen] = useState(false);
+  const [view, setView] = useState<"home" | "quick" | "editor" | "live">("home");
+  const [previewData, setPreviewData] = useState<OdptData | null>(null);
   const addDialog = useRef<HTMLDialogElement>(null);
-  const deviceDialog = useRef<HTMLDialogElement>(null);
   const operation = useRef(false);
   const dirtyRef = useRef(false);
   const activeRef = useRef(activeId);
@@ -61,6 +67,15 @@ function App() {
   const connected = channelStatus === "SUBSCRIBED";
   const canEdit = !!active && !!channel && loadedId === activeId && channelDeviceId === activeId && connected && online && !busy;
   const conflict = !!active && dirty && active.revision !== baseRevision;
+  const previewSelection = JSON.stringify(config?.selectedRoutes ?? []);
+
+  useEffect(() => {
+    if (view !== "editor" || !config) return;
+    const abort = new AbortController();
+    setPreviewData(null);
+    void loadOdptData(config, undefined, abort.signal).then(data => { if (!abort.signal.aborted) setPreviewData(data); }).catch(() => {});
+    return () => abort.abort();
+  }, [view, activeId, previewSelection]);
 
   useEffect(() => {
     let alive = true, polling = false;
@@ -137,6 +152,7 @@ function App() {
     if (!active) return;
     setOdptNote("Controller側の交通情報を更新しています…");
     void loadOdptData(effectiveDisplaySettings(active.settings, outputId), undefined, abort.signal, true).then(data => {
+      if (!abort.signal.aborted) setPreviewData(data);
       if (!abort.signal.aborted) setOdptNote(data.source === "unavailable" ? data.error ?? "交通情報を取得できません。時間をおいて再度お試しください。"
         : `${data.source === "cache" ? "保存済み" : "ODPT・GTFS取得済み"} · ${data.timetables.length}件の時刻表${data.fetchedAt ? ` · ${time(data.fetchedAt)}` : ""}`);
     }).catch(error => { if (!abort.signal.aborted) setOdptNote(message(error)); });
@@ -208,10 +224,6 @@ function App() {
     if (draft.devices.some(device => !device.name.trim())) { setNote("デバイス名を入力してください。"); return; }
     void operate("settings", { ...draft, updatedAt: new Date().toISOString() });
   }
-  function openDeviceMenu(id?: string) {
-    if (id) setOutputId(id);
-    setDeviceMenuOpen(true); deviceDialog.current?.showModal();
-  }
   async function addOutput(event: FormEvent) {
     event.preventDefault(); if (!newName.trim() || busy) return;
     if (dirty && !window.confirm("未保存の設定を破棄して新しいSignageを追加しますか？")) return;
@@ -244,15 +256,19 @@ function App() {
         const name = device.settings.devices[0]?.name || device.name;
         const selected = device.id === activeId;
         return <div key={device.id} className={`equipment-book${selected ? " selected" : ""}${device.display_enabled ? "" : " stopped"}`}>
-          <button className="book-select" type="button" disabled={busy} aria-pressed={selected} onClick={() => select(device.id)}>
-            <span className="book-type">SIGNAGE <i className={present ? "online" : ""} aria-hidden="true" /></span>
-            <strong title={name}>{name}</strong><small>{present ? "接続中" : "接続待ち"}</small>
+          <button className="book-select" type="button" disabled={busy} aria-pressed={selected}
+            aria-label={`${name} ${present ? "接続中" : "接続待ち"}`}
+            title={`${name}（${present ? "接続中" : "接続待ち"}）`} onClick={() => select(device.id)}>
+            <svg className="equipment-screen-icon" viewBox="0 0 32 28" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M2 20V2h21M16 23v3m-6 0h12" /><rect x="7" y="8" width="23" height="15" rx="1" />
+            </svg>
+            <strong title={name}>{name}</strong>
           </button>
-          <button className="book-settings" type="button" disabled={busy} aria-label={`${name}のデバイス設定`} aria-haspopup="dialog" aria-controls="device-settings" onClick={() => { if (select(device.id)) openDeviceMenu(); }}>⚙</button>
         </div>;
       })}
       <button className="equipment-add" type="button" disabled={busy} aria-label="＋ Signageを追加" title="Signageを追加" onClick={() => { setCreatedUrl(""); addDialog.current?.showModal(); }}>＋</button>
     </nav></div></AppHeader>
+    <nav className="controller-breadcrumb" aria-label="現在のページ"><button type="button" onClick={() => setView("home")} aria-current={view === "home" ? "page" : undefined}>トップ</button>{view !== "home" && <><span>/</span><span aria-current="page">{view === "quick" ? "クイック設定" : view === "editor" ? "エディターで細かく編集" : "今の様子（画面共有）"}</span></>}</nav>
     <section className="page equipment-page">
       {error && <p className="feedback error" role="alert">{error}</p>}
       {!!notifications.length && <details className="connection-notices"><summary>Signageの接続通知（{notifications.length}）</summary><ul aria-live="polite">{notifications.map((notice, index) => <li key={`${index}-${notice}`}>{notice}</li>)}</ul><button type="button" onClick={() => setNotifications([])}>通知を閉じる</button></details>}
@@ -261,35 +277,33 @@ function App() {
         <p className="feedback" role="status">{busy ? "描画・記録の完了を待っています…" : note}</p>
         {conflict && <p className="feedback error" role="alert">他のControllerが更新しました。編集中の設定は保持しています。Supabaseから再読込して変更をやり直してください。</p>}
         {output && draft && config ? <section id="equipment-customization" aria-label={`${output.name}の設定`}>
-          <div className="customize-heading"><div><p className="eyebrow">表示内容を管理</p><h2 className="page-title"><i />{output.name}</h2></div></div>
-          <form onSubmit={save}><fieldset disabled={!canEdit || conflict}>
-            <p className="control-help">{catalogNote}</p><p className="control-help">{odptNote}</p>
+          <div className="workspace-heading"><h1>{output.name}</h1><span className={online && connected ? "online" : "offline"}>● {online && connected ? active.display_enabled && output.enabled ? "表示中" : "表示停止中" : "接続待ち"}</span></div>
+          {(view === "home" || view === "live") && <div className={`controller-overview${view === "live" ? " live-expanded" : ""}`}>
+            {view === "home" && <div className="workspace-shortcuts"><button type="button" className="workspace-card quick-card" onClick={() => setView("quick")}><span className="card-symbol" aria-hidden="true">≡</span><strong>クイック設定</strong><span>路線・乗り物・スクロール文<br />写真・動画・デバイス設定など</span><span className="card-arrow" aria-hidden="true">↗</span></button>
+              <button type="button" className="workspace-card editor-card" onClick={() => { setView("editor"); if (!config.layout && canEdit && !conflict) edit(withOutputSettings(draft, output.id, { ...config, layout: initialLayout(config) })); }}><span className="card-symbol" aria-hidden="true">⊞</span><strong>エディターで<br />細かく編集する</strong><span>パーツを置いて、画面をデザイン</span><span className="card-arrow" aria-hidden="true">↗</span></button></div>}
+            <section className="current-screen"><header><h2>今の様子<span>（画面共有）</span></h2><button type="button" onClick={() => setView(view === "live" ? "home" : "live")}>{view === "live" ? "一覧に戻る" : "大きく表示"}</button></header><LivePreview key={activeId} channel={channel} online={online && connected} />
+              <p className="screen-response">{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "Signageの接続を待っています"}</p></section>
+          </div>}
+          {(view === "quick" || view === "editor") && <form onSubmit={save}>
+            {view === "editor" ? <LayoutEditor key={`layout|${activeId}|${output.id}`} settings={config} data={previewData} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, settings))} /> : <div className="quick-settings"><section className="quick-panel"><h2>駅・バス停と路線</h2>
+            <p className="control-help">{catalogNote}</p><p className="control-help">{odptNote}</p><fieldset disabled={!canEdit || conflict}>
             <RouteEditor key={`routes|${activeId}|${output.id}`} settings={config} lines={lines} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, settings))} />
+            <ServiceEditor settings={config} lines={lines} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, settings))} />
+            </fieldset></section><section className="quick-panel"><h2>スクロール文・写真・動画と表示設定</h2><fieldset disabled={!canEdit || conflict}>
             <ContentEditor key={`content|${activeId}|${output.id}`} settings={config} disabled={!canEdit || conflict} onChange={settings => edit(withOutputSettings(draft, output.id, { ...settings,
               selectedRoutes: settings.selectedRoutes.map(route => ({ ...route, stationLocation: route.stationLocation ?? lines.find(line => line.id === route.railway)?.stations.find(station => station.id === route.station)?.location })),
             }))} />
-            <div className="actions"><span>{dirty ? "未保存の変更があります" : "Supabaseの確定済み設定"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>Signageに反映して記録</button></div>
-          </fieldset></form>
+            </fieldset></section><section className="quick-panel device-settings-panel" aria-label="デバイス設定"><h2>デバイス設定</h2>
+              <label className="equipment-name-field">デバイス名<input value={output.name} maxLength={80} required disabled={!canEdit || conflict} onChange={event => edit({ ...draft, devices: draft.devices.map(item => item.id === output.id ? { ...item, name: event.target.value } : item) })} /></label>
+              <div className="studio-buttons"><button type="button" disabled={!canEdit || dirty} onClick={() => void toggleDisplay()}>{active.display_enabled && output.enabled ? "表示を停止" : "表示を再開"}</button><button type="button" disabled={!canEdit || dirty} onClick={() => void operate("refresh", {})}>交通情報を更新</button><button type="button" disabled={busy} onClick={() => void refresh()}>保存済みの設定を再読込</button><button type="button" onClick={() => setView("live")}>今の様子を見る</button></div>
+              <p className="control-help cloud-sync">{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "まだ画面の応答がありません"} · 確定リビジョン {active.revision}</p>
+              <a className="preview-link" href={signageUrl} target="_blank" rel="noreferrer">このSignageを開く ↗</a><label>このSignageの専用URL<input readOnly value={signageUrl} onFocus={event => event.target.select()} /></label>
+            </section></div>}
+            <div className="workspace-save"><span>{dirty ? "未保存の変更があります" : "保存済み"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>Signageに反映して記録</button></div>
+          </form>}
         </section> : <p>この端末にデバイスを追加してください。</p>}
       </> : <div className="equipment-empty"><h1>Signageを開いてください</h1><p>Signageで同じアカウントにログインすると、ここに端末が表示されます。</p><a className="open-signage" href={appUrl("signage")} target="_blank" rel="noreferrer">Signageを開く ↗</a></div>}
     </section>
-    <dialog ref={deviceDialog} id="device-settings" className="device-dialog device-settings-dialog" aria-labelledby="device-settings-title" onClose={() => setDeviceMenuOpen(false)}>
-      <div className="dialog-head"><h2 id="device-settings-title">デバイス設定</h2><button type="button" aria-label="閉じる" onClick={() => deviceDialog.current?.close()}>×</button></div>
-      <h3>{output?.name || active?.name}</h3>
-      {active && <div className="cloud-sync"><strong className={online && connected ? "online" : "offline"}>● {online && connected ? active.display_enabled && output?.enabled !== false ? "Signage表示中" : "Signage停止中" : "Signageの接続を待っています"}</strong>
-        <span>{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "最終応答：まだ画面の応答がありません"}</span><span>確定リビジョン {active.revision}</span></div>}
-      {deviceMenuOpen && active && <LivePreview key={activeId} channel={channel} online={online && connected} />}
-      <div className="studio-buttons"><button type="button" disabled={!canEdit || dirty} onClick={() => void toggleDisplay()}>{active?.display_enabled && output?.enabled !== false ? "表示を停止" : "表示を再開"}</button><button type="button" disabled={!canEdit || dirty} onClick={() => void operate("refresh", {})}>両画面の交通情報を更新</button></div>
-      {output && draft && <form onSubmit={save}><fieldset disabled={!canEdit || conflict}>
-        <label className="equipment-name-field">デバイス名<input value={output.name} maxLength={80} required onChange={event => edit({ ...draft, devices: draft.devices.map(item => item.id === output.id ? { ...item, name: event.target.value } : item) })} /></label>
-        <button type="submit" className="control-button primary" disabled={!dirty || !output.name.trim()}>変更を反映して記録</button>
-      </fieldset></form>}
-      {note && <p className="feedback">{note}</p>}
-      {error && <p className="feedback error">{error}</p>}
-      {conflict && <p className="feedback error">他のControllerが更新しました。Supabaseから再読込して変更をやり直してください。</p>}
-      <div className="device-settings-footer"><button type="button" className="control-button" disabled={!active || busy} onClick={() => void refresh()}>Supabaseから再読込</button>
-        <a className="preview-link" href={signageUrl} target="_blank" rel="noreferrer">このSignageを開く ↗</a><label>このSignageの専用URL<input readOnly value={signageUrl} onFocus={event => event.target.select()} /></label></div>
-    </dialog>
     <dialog ref={addDialog} className="device-dialog equipment-dialog" aria-labelledby="add-device-title"><div className="dialog-head"><h2 id="add-device-title">Signageを追加</h2><button type="button" aria-label="閉じる" onClick={() => addDialog.current?.close()}>×</button></div>
       {createdUrl ? <><p>Signageを追加しました。表示用デバイスでこのURLを開いてください。</p><label>専用URL<input readOnly value={createdUrl} onFocus={e => e.target.select()} /></label><a href={createdUrl} target="_blank" rel="noreferrer">新しいSignageを開く ↗</a></> : <form className="add-equipment-form" onSubmit={e => void addOutput(e)}><fieldset disabled={busy}>
         <label>デバイス名<input value={newName} maxLength={80} required onChange={event => setNewName(event.target.value)} /></label><p className="control-help">Signageは何台でも追加できます。別の画面には別の専用URLを使ってください。</p><button type="submit" className="control-button primary" disabled={!newName.trim()}>追加する</button></fieldset></form>}

@@ -62,7 +62,7 @@ export function RouteEditor({ settings, lines, disabled, onChange }: {
     for (const route of settings.selectedRoutes) {
       if (routeGroupKey(route) !== key) routes.push(route);
       else if (!inserted) {
-        routes.push(...[...new Set(directions)].map(direction => ({ railway: editing.railway, station: editing.station, direction, stationLocation: editStation?.location ?? editing.stationLocation, display: options })));
+        routes.push(...[...new Set(directions)].map(direction => ({ ...settings.selectedRoutes.find(r => routeGroupKey(r) === key && r.direction === direction), railway: editing.railway, station: editing.station, direction, stationLocation: editStation?.location ?? editing.stationLocation, display: options })));
         inserted = true;
       }
     }
