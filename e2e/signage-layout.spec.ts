@@ -3,6 +3,7 @@ import { DEFAULT_CLOUD_CONFIG } from "../shared/public-config";
 import type { DeviceRecord } from "../shared/cloud";
 import type { TickerSize } from "../shared/display-settings";
 import { odptFixture } from "./odpt-fixture";
+import { initialLayout } from "../shared/signage-layout";
 
 const cloud = DEFAULT_CLOUD_CONFIG.url;
 const owner = "30000000-0000-4000-8000-000000000001";
@@ -47,6 +48,51 @@ async function mockDisplay(context: BrowserContext, combined: boolean) {
   });
   return record;
 }
+
+test("custom-layout media and scrolling text keep playing through language changes", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const record = await mockDisplay(context, false);
+  record.settings.media!.push({ ...record.settings.media![0], id: "second", alt: "2枚目の写真", url: "https://layout.example.test/second.svg" });
+  record.settings.layout = initialLayout(record.settings);
+  const page = await context.newPage();
+  await page.clock.install({ time: new Date("2026-11-16T03:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-11-16T03:00:00.100Z"));
+  try {
+    await page.goto(`${baseURL}signage/?device=${deviceId}`);
+    await expect(page.locator(".signage-media img")).toHaveAttribute("alt", "街の案内");
+    const ticker = await page.locator(".rich-ticker").elementHandle();
+    await page.clock.runFor(16000);
+    expect(await ticker!.evaluate(el => el.isConnected)).toBe(true);
+    await expect(page.locator(".signage-media img")).toHaveAttribute("alt", "2枚目の写真");
+    await expect(page.locator(".rich-ticker")).toHaveCount(1);
+  } finally { await context.close(); }
+});
+
+test("a departing vehicle uses its exit animation independently from page transitions", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const record = await mockDisplay(context, false);
+  record.settings.departureAnimation = "fade"; record.settings.transition = "zoom";
+  const page = await context.newPage();
+  await page.clock.install({ time: new Date("2026-11-16T15:14:59Z") });
+  await page.clock.pauseAt(new Date("2026-11-16T15:14:59.100Z"));
+  try {
+    await page.goto(`${baseURL}signage/?device=${deviceId}`);
+    await expect(page.locator(".departure-list article")).toHaveCount(2);
+    await page.clock.runFor(2100);
+    const leaving = page.locator(".departure-list article[data-leaving=true]");
+    await expect(leaving).toHaveCount(1);
+    await expect(leaving).toHaveCSS("animation-name", "vehicle-fade-out");
+    await expect(page.locator(".departure-pages")).toHaveAttribute("data-page-transition", "zoom");
+    await page.clock.runFor(800);
+    await expect(leaving).toHaveCount(0);
+    await expect(page.locator(".departure-list article")).toHaveCount(1);
+    await page.clock.runFor(2400);
+    await expect(page.locator(".departure-pages")).toHaveCSS("animation-name", "departure-zoom");
+    await expect(leaving).toHaveCount(0);
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await expect(page.locator(".departure-pages")).toHaveCSS("animation-name", "none");
+  } finally { await context.close(); }
+});
 
 for (const combined of [false, true]) test(`alongside media keeps ${combined ? "both directions" : "one direction"} readable at display widths`, async ({ browser, baseURL }) => {
   const context = await browser.newContext();

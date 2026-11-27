@@ -12,6 +12,16 @@ const table = (calendar: string, times: string[] = []): Timetable => ({
     destinationEnglish: "Shibuya", destinationCodes: ["Z01"], trainNumber: null, note: null } satisfies Departure)),
 });
 
+test("delayed services remain until adjusted departure, sort by actual time, and keep their scheduled time", () => {
+  const late = table("Weekday", ["11:55", "12:02", "12:08"]);
+  assert.deepEqual(nextDepartures(late, new Date(2026, 10, 4, 12, 0), 0, 10).map(d => d.time), ["11:55", "12:02"]);
+  late.departures[0].delayMinutes = 20;
+  assert.deepEqual(nextDepartures(late, new Date(2026, 10, 4, 12, 0)).map(d => d.time), ["12:02", "12:08"]);
+  assert.deepEqual(nextDepartures(late, new Date(2026, 10, 4, 12, 9)).map(d => d.time), ["11:55"]);
+  assert.deepEqual(nextDepartures(table("Weekday", ["23:58"]), new Date(2026, 10, 5, 0, 3), 0, 7).map(d => d.time), ["23:58"]);
+  assert.equal(nextDepartures(table("Weekday", ["23:58"]), new Date(2026, 10, 5, 0, 5, 1), 0, 7).length, 0);
+});
+
 test("both directions stay together and different stations rotate independently", () => {
   const opposite = { ...selected, direction: "Oshiage" };
   const other = { ...selected, station: "Shibuya" };

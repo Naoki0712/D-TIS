@@ -1,5 +1,6 @@
 import type { DisplaySettings, FacilitySettings, SelectedRoute } from "./display-settings";
 import { contentSettings, geoPoint } from "./content-settings";
+import { parseServiceStatus } from "./service-status";
 
 export type CommandAction = "settings" | "display" | "refresh";
 export type Command = {
@@ -28,6 +29,7 @@ function displaySettings(value: unknown): DisplaySettings {
       throw new Error("路線・駅・方面の指定を確認してください。");
     }
     const route: SelectedRoute = { railway: raw.railway as string, station: raw.station as string, direction: raw.direction as string };
+    if (raw.service !== undefined) route.service = parseServiceStatus(raw.service);
     if (raw.stationLocation !== undefined) {
       const location = geoPoint(raw.stationLocation);
       if (!location) throw new Error("駅・停留所の位置を確認してください。");

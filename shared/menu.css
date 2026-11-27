@@ -1,0 +1,107 @@
+/* Shared two-tier menu based on the supplied portal, Signage and Controller designs. */
+.d-tis-menu,
+.equipment-controller .app-header.d-tis-menu,
+.site-header.d-tis-menu {
+  --menu-logo-width: 200px;
+  position: relative;
+  display: grid;
+  align-items: stretch;
+  justify-content: stretch;
+  grid-template-columns: var(--menu-logo-width) minmax(0, 1fr);
+  grid-template-rows: 50px minmax(50px, auto);
+  gap: 0;
+  width: 100%;
+  height: auto;
+  min-height: 100px;
+  padding: 0;
+  border: 0;
+  background: #000;
+  color: #1d1d1d;
+  font-family: Inter, Helvetica, "BIZ UDPGothic", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.25;
+  backdrop-filter: none;
+}
+.d-tis-menu[hidden] { display: none !important; }
+.d-tis-brand { grid-row: 1 / 3; display: flex; align-items: center; justify-content: center; background: #1d1d1d; }
+.d-tis-brand img { display: block; width: 150px; height: 75px; object-fit: contain; }
+.d-tis-products { display: flex; align-items: stretch; gap: 5px; min-width: 0; padding: 5px 15px 0; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.d-tis-products a { display: flex; flex: 0 0 auto; align-items: center; padding: 0 10px; border-radius: 10px 10px 0 0; color: #fff; text-decoration: none; white-space: nowrap; }
+.d-tis-products a[aria-current="page"] { color: #1d1d1d; background: #fff; }
+.d-tis-products a:hover { background: #333; }
+.d-tis-products a[aria-current="page"]:hover { background: #fff; }
+.d-tis-products a:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+.d-tis-products a[aria-current="page"]:focus-visible { outline-color: #1d1d1d; }
+.d-tis-secondary { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 0; min-height: 50px; padding: 0 25px; background: #fff; color: #1d1d1d; }
+.d-tis-secondary button, .d-tis-secondary a { color: inherit; }
+.d-tis-secondary button:focus-visible, .d-tis-secondary a:focus-visible { outline: 2px solid #1d1d1d; outline-offset: -4px; }
+.app-menu-shell { flex: 0 0 auto; min-width: 0; z-index: 30; }
+.d-tis-menu-toggle { display: flex; align-items: center; justify-content: center; width: 100%; height: 32px; padding: 0; border: 0; color: #fff; background: #000; }
+.d-tis-menu-toggle span { width: 17px; height: 10px; background: currentColor; clip-path: polygon(0 0, 50% 75%, 100% 0, 100% 25%, 50% 100%, 0 25%); }
+.d-tis-menu-toggle[aria-expanded="false"] span { transform: rotate(180deg); }
+.d-tis-menu-toggle:focus-visible { outline-offset: -4px; }
+.app-menu-overlay { position: fixed; inset: 0 0 auto; pointer-events: none; transform: translateY(0); transition: transform .28s cubic-bezier(.22, .61, .36, 1); }
+.app-menu-overlay[data-collapsed="true"] { transform: translateY(calc(-100% + 32px)); }
+.app-menu-overlay .app-header { pointer-events: auto; visibility: visible; transition: visibility 0s; }
+.app-menu-overlay[data-collapsed="true"] .app-header { pointer-events: none; visibility: hidden; transition-delay: .28s; }
+.app-menu-overlay .d-tis-menu-toggle { width: 72px; margin-inline: auto; border-radius: 0 0 10px 10px; background: #000c; pointer-events: auto; }
+.app-menu-overlay .d-tis-menu-toggle span { transition: transform .28s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .app-menu-overlay, .app-menu-overlay .app-header, .app-menu-overlay .d-tis-menu-toggle span { transition: none; }
+}
+.signage-menu-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.signage-disconnect { flex: 0 0 auto; min-height: 44px; padding: 0; border: 0; background: transparent; font-size: inherit; font-weight: inherit; }
+.signage-disconnect:hover { text-decoration: underline; text-underline-offset: 5px; }
+.signage-disconnect:disabled { opacity: .5; cursor: wait; }
+.signage-disconnect span { display: inline-block; white-space: nowrap; }
+.signage-display-header { position: relative; display: flex; align-items: center; justify-content: flex-end; gap: 20px; min-height: 100px; padding-inline: var(--page-space); background: #1d1d1d; }
+.signage-display-header .app-facility { position: static; flex: 1; max-width: none; transform: none; padding: 8px 0; }
+.signage-display-header time { font-size: var(--text-number); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Keep device selection and settings available in a flat lower menu. */
+.equipment-controller .d-tis-secondary .equipment-shelf-wrapper { flex: 1; max-width: 100%; min-width: 0; margin: 0; padding: 0; align-self: stretch; }
+.equipment-controller .d-tis-secondary .equipment-shelf { justify-content: safe flex-end; align-items: stretch; gap: 8px; min-height: 50px; padding: 0; border: 0; overflow-x: auto; scrollbar-color: #777 #fff; }
+.equipment-controller .d-tis-secondary { position: relative; height: 50px; }
+.equipment-controller .d-tis-secondary .equipment-shelf { height: 54px; min-height: 54px; overflow-y: hidden; scrollbar-width: thin; }
+.d-tis-products::-webkit-scrollbar,.portal-section-menu::-webkit-scrollbar,.equipment-shelf::-webkit-scrollbar { height: 4px; }
+.d-tis-products::-webkit-scrollbar-thumb,.portal-section-menu::-webkit-scrollbar-thumb,.equipment-shelf::-webkit-scrollbar-thumb { background: #888; border-radius: 4px; }
+.d-tis-products::-webkit-scrollbar-track,.portal-section-menu::-webkit-scrollbar-track,.equipment-shelf::-webkit-scrollbar-track { background: transparent; }
+.equipment-controller .d-tis-secondary .equipment-book { flex: 0 0 auto; max-width: 320px; height: 50px; padding: 0; border: 0; border-bottom: 8px solid transparent; border-radius: 0; color: #1d1d1d; background: transparent; box-shadow: none; transition: none; }
+.equipment-controller .d-tis-secondary .equipment-book.selected { height: 50px; border-color: #1d1d1d; background: transparent; }
+.equipment-controller .d-tis-secondary .equipment-book .book-select { display: flex; align-items: center; gap: 10px; padding: 0 4px 0 10px; }
+.equipment-controller .d-tis-secondary .equipment-book strong { margin: 0; font-size: 24px; }
+.equipment-controller .d-tis-secondary .equipment-book .book-settings { align-self: center; flex: 0 0 28px; padding: 2px; font-size: 20px; }
+.equipment-controller .d-tis-secondary .equipment-book button:hover { background: #eee; }
+.equipment-controller .d-tis-secondary .equipment-book.stopped strong { color: #666; }
+.equipment-screen-icon { width: 32px; height: 28px; flex: 0 0 auto; }
+.equipment-controller .d-tis-secondary .equipment-add { flex: 0 0 38px; min-width: 38px; height: 42px; margin: 0; padding: 0; border: 0; color: #1d1d1d; background: transparent; font-size: 30px; }
+
+.site-header.d-tis-menu { position: sticky; top: 0; z-index: 50; }
+.d-tis-menu .portal-section-menu { display: flex; align-items: stretch; justify-content: safe flex-end; gap: 16px; min-height: 50px; overflow-x: auto; scrollbar-width: thin; }
+.portal-section-menu a { display: flex; align-items: center; flex: 0 0 auto; padding: 6px 4px 0; border-bottom: 8px solid transparent; color: #1d1d1d; text-decoration: none; white-space: nowrap; }
+.portal-section-menu a[aria-current="location"] { border-bottom-color: #1d1d1d; }
+.portal-section-menu a:hover { background: #eee; }
+
+@media (max-width: 720px) {
+  .d-tis-menu, .equipment-controller .app-header.d-tis-menu, .site-header.d-tis-menu { --menu-logo-width: 92px; font-size: 16px; }
+  .d-tis-brand { grid-row: 1; }
+  .d-tis-brand img { width: 76px; height: 38px; }
+  .d-tis-products { gap: 0; padding-inline: 4px; }
+  .d-tis-products a { padding-inline: 5px; border-radius: 8px 8px 0 0; font-size: clamp(12px, 3.6vw, 18px); }
+  .d-tis-secondary { grid-column: 1 / -1; gap: 12px; padding-inline: 12px; }
+  .signage-disconnect { max-width: 55%; font-size: 14px; text-align: right; }
+  .signage-display-header { min-height: 80px; gap: 12px; }
+  .signage-display-header time { font-size: clamp(28px, 8vw, 48px); }
+  .signage-display-header .app-facility { flex-basis: auto; }
+  .equipment-controller .d-tis-secondary .equipment-shelf { justify-content: flex-start; }
+  .equipment-controller .d-tis-secondary .equipment-book strong { font-size: 18px; }
+  .equipment-screen-icon { width: 26px; height: 24px; }
+  .d-tis-menu .portal-section-menu { justify-content: flex-start; flex-wrap: wrap; gap: 0 12px; font-size: 14px; }
+  .portal-section-menu a { min-height: 44px; border-bottom-width: 5px; }
+}
+@media (max-width: 380px) {
+  .d-tis-menu, .equipment-controller .app-header.d-tis-menu, .site-header.d-tis-menu { --menu-logo-width: 76px; }
+  .d-tis-brand img { width: 64px; height: 32px; }
+  .d-tis-products a { padding-inline: 4px; font-size: 12px; }
+}

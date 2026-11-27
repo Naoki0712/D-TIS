@@ -8,6 +8,7 @@ import "./odpt.css";
 import "./service-info.css";
 import "../../shared/theme.css";
 import "./studio.css";
+import "../../shared/menu.css";
 document.documentElement.classList.toggle(
   "windows",
   navigator.userAgent.includes("Windows"),

@@ -33,6 +33,7 @@ test("route map selects the actual station, supports zoom and pan, and prevents 
 
   const errors: string[] = []; page.on("pageerror", error => errors.push(error.message));
   await page.goto(`${baseURL}controller/`);
+  await page.getByRole("button", { name: /クイック設定/ }).click();
   await page.getByRole("button", { name: "＋ 路線を追加する" }).click();
   const dialog = page.getByRole("dialog", { name: "路線を追加", exact: true });
   await expect(dialog.getByRole("combobox", { name: "乗り物", exact: true })).toHaveCount(0);

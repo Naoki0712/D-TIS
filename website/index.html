@@ -11,13 +11,16 @@
 </head>
 <body>
 <a class="skip-link" href="#main">本文へ移動</a>
-<header class="site-header">
-  <a class="brand" href="#top" aria-label="D-TIS ホーム"><img src="/poster-assets/logo.svg" alt="D-TIS" width="104" height="65"></a>
-  <nav id="main-menu" class="main-nav" aria-label="メインナビゲーション">
-    <a class="nav-use" data-app-link="controller" href="./controller/">システムを利用する ↗</a>
-    <a href="#intro-video">紹介動画</a><a href="#background">背景</a><a href="#about">目的・目標</a><a href="#process">開発</a><a href="#evaluation">評価・考察</a><a href="#outlook">展望</a><a href="#library">資料</a><a href="#contact">お問い合わせ</a>
+<header class="site-header d-tis-menu">
+  <a class="d-tis-brand" href="#top" aria-label="D-TIS ポータルサイト"><img src="/assets/Logo/1.svg" alt="D-TIS" width="150" height="75"></a>
+  <nav class="d-tis-products" aria-label="ページ切替">
+    <a href="#top" aria-current="page">ポータルサイト</a>
+    <a data-app-link="signage" href="./signage/">Signage</a>
+    <a data-app-link="controller" href="./controller/">Controller</a>
   </nav>
-  <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-menu" aria-label="メニューを開く"><span></span><span></span></button>
+  <nav class="d-tis-secondary portal-section-menu" aria-label="メインナビゲーション">
+    <a href="#top" aria-current="location">トップ</a><a href="#news">お知らせ</a><a href="#intro-video">紹介動画</a><a href="#library">データ集</a><a href="#contact">お問い合わせ</a>
+  </nav>
 </header>
 <main id="main">
   <section id="top" class="hero" aria-labelledby="hero-title">
@@ -30,7 +33,7 @@
       <a class="text-link" href="#background">D-TISについて知る <span aria-hidden="true">↓</span></a></div>
     </div>
   </section>
-  <aside class="research-notice home-notice content-inset">本サイトは、学校での課題研究により制作しています。アカウントを登録すると、身近なデバイスでD-TISを利用できます。</aside>
+  <aside id="news" class="research-notice home-notice content-inset">本サイトは、学校での課題研究により制作しています。アカウントを登録すると、身近なデバイスでD-TISを利用できます。</aside>
 
   <section id="intro-video" class="section surface" aria-labelledby="video-title">
     <h2 id="video-title">紹介動画</h2>

@@ -20,6 +20,8 @@ export interface SignageState {
   powerError: string | null;
 }
 export interface Departure {
+  delayMinutes?: number;
+  cancelled?: boolean;
   time: string;
   type: string;
   typeEnglish: string;

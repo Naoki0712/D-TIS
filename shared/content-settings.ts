@@ -1,4 +1,5 @@
 import type { AppearanceSettings, DisplaySettings, GeoPoint, MediaItem, TickerSegment, TravelSettings, TransitionStyle } from "./display-settings";
+import { parseLayout } from "./signage-layout";
 const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 const finite = (v: unknown, min: number, max: number): v is number => typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
 const str = (v: unknown, max: number): v is string => typeof v === "string" && v.length <= max;
@@ -26,9 +27,11 @@ export function contentSettings(value: Record<string, unknown>): Partial<Display
     if (result.preset === "custom" && !result.customFont) throw new Error("使用するフォントを追加してください。");
     out.appearance = result;
   }
-  if (value.transition !== undefined) {
-    if (!["none", "slide", "fade", "flip", "split-flap", "zoom"].includes(String(value.transition))) throw new Error("切り替え効果を確認してください。");
-    out.transition = value.transition as TransitionStyle;
+  if (value.layout !== undefined) out.layout = parseLayout(value.layout);
+  for (const key of ["transition", "departureAnimation"] as const) {
+    if (value[key] === undefined) continue;
+    if (!["none", "slide", "fade", "flip", "split-flap", "zoom"].includes(String(value[key]))) throw new Error("切り替え効果を確認してください。");
+    out[key] = value[key] as TransitionStyle;
   }
   if (value.travel !== undefined) {
     const t = value.travel;

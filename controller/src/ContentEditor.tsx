@@ -60,7 +60,9 @@ export function ContentEditor({ settings, onChange, disabled }: { settings: Disp
           const format = ext === "ttf" ? "truetype" : ext === "otf" ? "opentype" : ext === "woff" ? "woff" : "woff2";
           update({ appearance: { preset: "custom", customFont: { family: fontName.trim(), url: fontUrl, format: format as CustomFont["format"] } } });
         }}>URLのフォントを追加</button></details>
-      <label>乗り物が入れ替わるときの効果<select value={settings.transition ?? "fade"} onChange={e => update({ transition: e.target.value as DisplaySettings["transition"] })}>
+      <label>発車時のアニメーション<select value={settings.departureAnimation ?? "slide"} onChange={e => update({ departureAnimation: e.target.value as DisplaySettings["departureAnimation"] })}>
+        <option value="none">なし</option><option value="slide">上にスライド</option><option value="fade">フェード</option><option value="flip">立体フリップ</option><option value="split-flap">パタパタ表示</option><option value="zoom">ズーム</option></select></label>
+      <label>画面切り替えのトランジション<select value={settings.transition ?? "fade"} onChange={e => update({ transition: e.target.value as DisplaySettings["transition"] })}>
         <option value="none">なし</option><option value="slide">上にスライド</option><option value="fade">フェード</option><option value="flip">立体フリップ</option><option value="split-flap">パタパタ表示</option><option value="zoom">ズーム</option></select></label>
     </fieldset></section>
     <section className="studio-section"><h2>駅・停留所までの移動時間</h2><fieldset disabled={locked}>

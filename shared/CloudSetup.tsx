@@ -1,9 +1,20 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type FormEvent, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { getCloudClient, readCloudConfig } from "./cloud";
 import { authErrorMessage, consumeAuthRedirectError } from "./cloud-auth";
 import { AppHeader } from "./AppHeader";
 import "./cloud.css";
+
+const AccountActions = createContext<{ logout: () => Promise<void>; busy: boolean } | null>(null);
+
+export function SignageDisconnectButton() {
+  const account = useContext(AccountActions);
+  if (!account) return null;
+  return <button className="signage-disconnect" type="button" disabled={account.busy}
+    aria-label={account.busy ? "解除中…" : "Controllerとの連携を解除"}
+    title="このSignageからログアウトしてControllerとの連携を解除します"
+    onClick={() => void account.logout()}>{account.busy ? "解除中…" : <><span>Controllerとの</span><span>連携を解除</span></>}</button>;
+}
 
 export function CloudGate({ product, children }: { product: "Controller" | "Signage"; children: ReactNode }) {
   const [config] = useState(readCloudConfig);
@@ -89,7 +100,9 @@ export function CloudGate({ product, children }: { product: "Controller" | "Sign
   }
 
   if (session) return <>
-    <div key={`${config.url}|${session.user.id}`}>{children}</div>
+    <AccountActions.Provider value={{ logout, busy }}>
+      <div key={`${config.url}|${session.user.id}`}>{children}</div>
+    </AccountActions.Provider>
     <details className="cloud-account" data-preview-ignore>
       <summary aria-label="アカウントを開く">アカウント</summary>
       <div className="cloud-account-panel"><p>{session.user.email}</p>

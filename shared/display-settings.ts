@@ -1,6 +1,17 @@
 export type DirectionDisplayMode = "separate" | "combined";
 export type DeviceType = "lcd" | "led" | "bell-switch";
 export type TransitionStyle = "none" | "slide" | "fade" | "flip" | "split-flap" | "zoom";
+export interface ServiceStatus { status: "normal" | "delayed" | "suspended"; delayMinutes: number; message: string }
+export interface PartTextStyle { font: FontPreset; fontSize: number; color: string; weight: 400 | 700; italic: boolean; underline: boolean; align: "left" | "center" | "right"; blink: boolean }
+export type BoardTextField = "lineName" | "lineSecondary" | "directionName" | "directionSecondary" | "departureTime" | "trainType" | "destinationName" | "destinationSecondary";
+export interface SignagePart {
+  id: string; kind: "departures" | "ticker" | "text" | "media" | "clock";
+  x: number; y: number; width: number; height: number;
+  routeIndex?: number; mediaId?: string; text?: string; style?: PartTextStyle;
+  fieldText?: Partial<Record<BoardTextField, string>>;
+  fieldStyles?: Partial<Record<BoardTextField, PartTextStyle>>;
+}
+export interface SignageLayout { parts: SignagePart[] }
 export type FontPreset = "gothic" | "mincho" | "custom";
 export interface CustomFont { family: string; url: string; format: "woff2" | "woff" | "truetype" | "opentype" }
 export interface AppearanceSettings { preset: FontPreset; customFont?: CustomFont }
@@ -28,6 +39,7 @@ export interface SelectedRoute {
   direction: string;
   display?: RouteDisplaySettings;
   stationLocation?: GeoPoint;
+  service?: ServiceStatus;
 }
 
 export interface DisplaySettings {
@@ -37,6 +49,8 @@ export interface DisplaySettings {
   tickerText: string;
   appearance?: AppearanceSettings;
   transition?: TransitionStyle;
+  departureAnimation?: TransitionStyle;
+  layout?: SignageLayout;
   travel?: TravelSettings;
   media?: MediaItem[];
   mediaLayout?: "alongside" | "alternating";
@@ -75,6 +89,8 @@ export function effectiveDisplaySettings(facility: FacilityInput, outputId?: str
     tickerText: settings?.tickerText ?? facility.tickerText ?? "",
     appearance: settings ? settings.appearance : facility.appearance,
     transition: settings ? settings.transition : facility.transition,
+    departureAnimation: settings ? settings.departureAnimation : facility.departureAnimation,
+    layout: settings ? settings.layout : facility.layout,
     travel: settings ? settings.travel : facility.travel,
     media: settings ? settings.media : facility.media,
     mediaLayout: settings ? settings.mediaLayout : facility.mediaLayout,
