@@ -11,6 +11,8 @@ const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR
 
 function backend() {
   const rows = new Map<string, DeviceRecord>(), uploads: string[] = [], applied: string[] = [];
+  const registrations: string[] = [], deletions: string[] = [];
+  const faults = { deleteDenied: false, deleteNoop: false, dropDeleteResponse: false, lookupOffline: false };
   const sockets = new Set<{ ws: WebSocketRoute; topics: Set<string> }>();
   async function attach(context: BrowserContext) {
     await context.addInitScript(({ url, token, user }) => {
@@ -32,15 +34,26 @@ function backend() {
       if (path.pathname === "/rest/v1/dtis_devices") {
         if (request.method() === "POST") {
           const record = { ...body, revision: 0, refresh_version: 0, display_enabled: true, last_seen_at: null, updated_at: new Date().toISOString() };
+          registrations.push(record.id);
           rows.set(record.id, record); return json(record);
         }
         const id = path.searchParams.get("id")?.replace(/^eq\./, "");
+        if (request.method() === "DELETE") {
+          if (faults.deleteDenied) return json({ code: "42501", message: "permission denied for table dtis_devices" }, 403);
+          if (faults.deleteNoop) return json([]);
+          const removed = id && rows.delete(id);
+          if (removed) deletions.push(id);
+          if (faults.dropDeleteResponse) return route.abort("failed");
+          return json(removed ? [{ id }] : []);
+        }
+        if (id && faults.lookupOffline) return route.abort("failed");
         const values = id ? [...rows.values()].filter(row => row.id === id) : [...rows.values()];
+        if (request.headers().accept?.includes("vnd.pgrst.object") && !values.length) return json({ code: "PGRST116", message: "Cannot coerce the result to a single JSON object", details: "The result contains 0 rows" }, 406);
         return json(request.headers().accept?.includes("vnd.pgrst.object") ? values[0] ?? null : values);
       }
       if (path.pathname === "/rest/v1/dtis_events") return json([]);
       const record = rows.get(body.p_device_id);
-      if (!record) return json({ message: "device_not_found" }, 404);
+      if (!record) return json({ code: "42501", message: "device_not_found" }, 403);
       if (path.pathname.endsWith("/dtis_connect")) {
         record.last_connection_kind = record.last_connected_at || record.last_seen_at ? "existing" : "new";
         record.last_connected_at = record.last_seen_at = new Date().toISOString(); return json(record);
@@ -72,7 +85,7 @@ function backend() {
       });
     });
   }
-  return { rows, uploads, applied, attach };
+  return { rows, uploads, applied, registrations, deletions, faults, attach };
 }
 
 test("one account controls independent Signages and persists fonts, GPS, media, and character styling", async ({ browser, baseURL }) => {
@@ -336,4 +349,114 @@ test("homepage and iPad WebKit load bundled Japanese fonts and expose usable nav
     expect(await page.evaluate(() => getComputedStyle(document.body).fontFamily)).toContain("BIZ UDPGothic");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   } finally { await context.close(); await safari?.close(); }
+});
+
+test("offline Signages can be removed with cancellation, permission failures, and last-device cleanup", async ({ browser, baseURL }) => {
+  const api = backend(), context = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  await api.attach(context);
+  const errors: string[] = []; context.on("page", page => page.on("pageerror", error => errors.push(error.message)));
+  const page = await context.newPage();
+  try {
+    await page.goto(`${baseURL}controller/`);
+    async function add(name: string) {
+      await page.getByRole("button", { name: "＋ Signageを追加" }).click();
+      const dialog = page.getByRole("dialog", { name: "Signageを追加", exact: true });
+      await dialog.getByLabel("デバイス名", { exact: true }).fill(name);
+      await dialog.getByRole("button", { name: "追加する", exact: true }).click();
+      const address = await dialog.getByLabel("専用URL", { exact: true }).inputValue();
+      await dialog.getByRole("button", { name: "閉じる" }).click();
+      return new URL(address).searchParams.get("device")!;
+    }
+    const a = await add("残す端末"), b = await add("削除する端末");
+    const preserved = structuredClone(api.rows.get(a));
+    const shelf = page.getByRole("navigation", { name: "Signage一覧" });
+    await page.getByRole("button", { name: /クイック設定/ }).click();
+    const remove = page.getByRole("button", { name: "このSignageを削除", exact: true });
+    await expect(remove).toBeEnabled();
+    await remove.click();
+    const dialog = page.getByRole("dialog", { name: "Signageを削除", exact: true });
+    await expect(dialog).toContainText("削除する端末");
+    await expect(dialog).toContainText("設定と操作履歴");
+    expect(await dialog.evaluate(el => el.getBoundingClientRect().right <= innerWidth && el.getBoundingClientRect().left >= 0)).toBe(true);
+    await page.screenshot({ path: "artifacts/delete-signage-mobile.png" });
+    await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+    expect(api.deletions).toEqual([]); expect(api.rows.size).toBe(2);
+    await remove.click(); await page.keyboard.press("Escape"); await expect(dialog).not.toBeVisible();
+    api.faults.deleteDenied = true;
+    await remove.click(); await dialog.getByRole("button", { name: "削除する", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("削除権限がありません");
+    expect(api.rows.size).toBe(2); await expect(shelf.locator(".equipment-book")).toHaveCount(2);
+    api.faults.deleteDenied = false; api.faults.deleteNoop = true;
+    await dialog.getByRole("button", { name: "削除する", exact: true }).click();
+    await expect(dialog.getByRole("alert")).toContainText("Signageを削除できませんでした");
+    expect(api.rows.size).toBe(2);
+    api.faults.deleteNoop = false;
+    await dialog.getByRole("button", { name: "削除する", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(shelf.locator(".equipment-book")).toHaveCount(1);
+    await expect(shelf.getByRole("button", { name: /残す端末.*接続待ち/ })).toHaveAttribute("aria-pressed", "true");
+    expect(api.rows.has(b)).toBe(false); expect(api.rows.get(a)).toEqual(preserved);
+    await page.getByRole("button", { name: /クイック設定/ }).click();
+    await remove.click();
+    // A committed DELETE with a lost HTTP response is reconciled by a read.
+    api.faults.dropDeleteResponse = true;
+    await dialog.getByRole("button", { name: "削除する", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(page.getByRole("heading", { name: "Signageを開いてください" })).toBeVisible();
+    await expect(shelf.locator(".equipment-book")).toHaveCount(0);
+    expect(api.rows.size).toBe(0); expect(api.deletions).toEqual([b, a]);
+    await page.reload(); await expect(shelf.locator(".equipment-book")).toHaveCount(0);
+    expect(errors).toEqual([]);
+  } finally { await context.close(); }
+});
+
+test("deletion clears a running Signage and its cache without recreating known browser IDs or explicit URLs", async ({ browser, baseURL }) => {
+  const api = backend(), context = await browser.newContext(); await api.attach(context);
+  const errors: string[] = []; context.on("page", page => page.on("pageerror", error => errors.push(error.message)));
+  const signage = await context.newPage(), controller = await context.newPage();
+  try {
+    await signage.goto(`${baseURL}signage/`);
+    await expect(signage.getByRole("heading", { name: "表示する路線を追加してください" })).toBeVisible();
+    await expect.poll(() => api.rows.size).toBe(1);
+    const id = [...api.rows.keys()][0];
+    await controller.goto(`${baseURL}controller/`);
+    await controller.getByRole("button", { name: /クイック設定/ }).click();
+    const ticker = controller.getByLabel("画面下部のスクロール文面");
+    await expect(ticker).toBeEnabled(); await ticker.fill("未保存の文面");
+    await controller.getByRole("button", { name: "このSignageを削除", exact: true }).click();
+    const dialog = controller.getByRole("dialog", { name: "Signageを削除", exact: true });
+    await expect(dialog).toContainText("未保存の変更も破棄されます");
+    await dialog.getByRole("button", { name: "キャンセル", exact: true }).click();
+    await expect(ticker).toHaveText("未保存の文面"); expect(api.deletions).toEqual([]);
+    // Network failure retains the existing display rather than marking it deleted.
+    api.faults.lookupOffline = true;
+    await expect(signage.locator(".signage-connection-error")).toContainText("現在の表示を継続", { timeout: 15000 });
+    await expect(signage.getByRole("heading", { name: "表示する路線を追加してください" })).toBeVisible();
+    api.faults.lookupOffline = false;
+    await controller.getByRole("button", { name: "このSignageを削除", exact: true }).click();
+    await dialog.getByRole("button", { name: "削除する", exact: true }).click();
+    await expect(dialog).not.toBeVisible();
+    await expect(signage.getByRole("heading", { name: "このSignageは利用できません" })).toBeVisible({ timeout: 15000 });
+    await expect(signage.locator(".signage-parts-stage")).toHaveCount(0);
+    expect(await signage.evaluate(id => localStorage.getItem(`d-tis.signage.applied.${id}`), id)).toBeNull();
+    await signage.screenshot({ path: "artifacts/deleted-signage.png" });
+    const registrationCount = api.registrations.length;
+    await signage.reload();
+    await expect(signage.getByRole("heading", { name: "このSignageは利用できません" })).toBeVisible();
+    await signage.goto(`${baseURL}signage/?device=${id}`);
+    await expect(signage.getByRole("heading", { name: "このSignageは利用できません" })).toBeVisible();
+    expect(api.registrations.length).toBe(registrationCount); expect(api.rows.size).toBe(0);
+    await controller.reload();
+    await expect(controller.getByRole("navigation", { name: "Signage一覧" }).locator(".equipment-book")).toHaveCount(0);
+    await controller.getByRole("button", { name: "＋ Signageを追加" }).click();
+    const addDialog = controller.getByRole("dialog", { name: "Signageを追加", exact: true });
+    await addDialog.getByLabel("デバイス名", { exact: true }).fill("新しい端末");
+    await addDialog.getByRole("button", { name: "追加する", exact: true }).click();
+    const newAddress = await addDialog.getByLabel("専用URL", { exact: true }).inputValue();
+    await addDialog.getByRole("button", { name: "閉じる" }).click();
+    await signage.goto(newAddress);
+    await expect(signage.getByRole("heading", { name: "表示する路線を追加してください" })).toBeVisible();
+    expect(api.rows.size).toBe(1); expect(api.rows.has(id)).toBe(false);
+    expect(errors).toEqual([]);
+  } finally { await context.close(); }
 });

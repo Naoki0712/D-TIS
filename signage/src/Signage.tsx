@@ -9,7 +9,7 @@ import { SignageScreen } from "./SignageScreen";
 
 
 export function Signage() {
-  const { facility, data, state, selectedOutput, outputMissing, connectionError, channel } = useSignageRuntime();
+  const { facility, data, state, selectedOutput, outputMissing, connectionError, channel, deviceUnavailable } = useSignageRuntime();
   const [now, setNow] = useState(() => japanTime(new Date()));
   const [rotationTick, setRotationTick] = useState(0);
   const content = useRef<HTMLDivElement>(null);
@@ -44,13 +44,14 @@ export function Signage() {
   return (
     <><SignageSharing channel={channel} outputId={selectedOutput?.id} /><main style={fontStyle} data-font-preset={facility?.appearance?.preset ?? "gothic"} data-ticker-size={facility?.ticker?.size ?? "medium"} className={`signage${displayPaused ? " signage-paused" : ""}`}>
       {!displayPaused && <AppHeader product="Signage" collapsible>
-        <span className="signage-menu-name" title={selectedOutput?.name || state?.hostname}>デバイス名：{selectedOutput?.name || state?.hostname || "接続中…"}</span>
+        <span className="signage-menu-name" title={selectedOutput?.name || state?.hostname}>デバイス名：{deviceUnavailable ? "登録なし" : selectedOutput?.name || state?.hostname || "接続中…"}</span>
         <SignageDisconnectButton />
       </AppHeader>}
       {connectionError && <p className="signage-connection-error" role="status">{connectionError}</p>}
       {data?.stale && !connectionError && <p className="signage-connection-error" role="status">交通情報の更新に一部失敗したため、保存済みの時刻表を表示しています。{data.fetchedAt ? `最終取得: ${new Date(data.fetchedAt).toLocaleString("ja-JP")}` : ""}</p>}
       <div ref={content} className="signage-content unified-layout">
-      {displayPaused ? <section className="signage-pause-message" aria-label="表示停止中"><h1>表示を停止しています</h1><p>Controllerから表示を再開できます。</p></section>
+      {deviceUnavailable ? <section className="odpt-empty" role="status"><h1>このSignageは利用できません</h1><p>削除されたか、アクセスできないSignageです。</p><p>Controllerで新しいSignageを追加し、その専用URLを開いてください。</p></section>
+        : displayPaused ? <section className="signage-pause-message" aria-label="表示停止中"><h1>表示を停止しています</h1><p>Controllerから表示を再開できます。</p></section>
         : outputMissing ? <section className="odpt-empty"><h2>設備が見つかりません</h2><p>Controllerで設備を選び直してください。</p></section>
         : facility ? <SignageScreen settings={facility} data={data} now={now} pageRoutes={page} showEnglish={showEnglish} rotationTick={rotationTick} /> : null}
       </div>

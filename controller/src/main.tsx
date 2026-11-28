@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { AppHeader, appUrl } from "../../shared/AppHeader";
 import { CloudGate } from "../../shared/CloudSetup";
 import { LivePreview } from "../../shared/live-preview";
-import { getDevice, listDevices, listDeviceEvents, newCommand, sendCommand, subscribeDevice, registerDevice, type CommandAction, type DeviceChannel, type DeviceRecord } from "../../shared/cloud";
+import { deleteDevice, getDevice, listDevices, listDeviceEvents, newCommand, sendCommand, subscribeDevice, registerDevice, type CommandAction, type DeviceChannel, type DeviceRecord } from "../../shared/cloud";
 import { getOdptCatalog, loadOdptData } from "../../shared/browser-odpt";
 import { mergeDeviceList, mergeDeviceSnapshot } from "../../shared/cloud-view-state";
 import { effectiveDisplaySettings, selectOutput, withOutputSettings, type FacilitySettings } from "../../shared/display-settings";
@@ -55,6 +55,12 @@ function App() {
   const [view, setView] = useState<"home" | "quick" | "editor" | "live">("home");
   const [previewData, setPreviewData] = useState<OdptData | null>(null);
   const addDialog = useRef<HTMLDialogElement>(null);
+  const deleteDialog = useRef<HTMLDialogElement>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [deleteError, setDeleteError] = useState("");
+  const [removalNotice, setRemovalNotice] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const deletedIds = useRef(new Set<string>());
   const operation = useRef(false);
   const dirtyRef = useRef(false);
   const activeRef = useRef(activeId);
@@ -82,7 +88,7 @@ function App() {
     async function poll() {
       if (polling) return; polling = true;
       try {
-        const rows = await listDevices();
+        const rows = (await listDevices()).filter(row => !deletedIds.current.has(row.id));
         if (alive) {
           const alerts: string[] = [];
           for (const row of rows) {
@@ -236,6 +242,28 @@ function App() {
       setNotifications(old => [`${record.settings.devices[0].name}：新しいSignageを追加しました。専用URLを表示用端末で開いてください。`, ...old].slice(0, 20));
     } catch (error) { setNote(message(error)); } finally { setBusy(false); }
   }
+  function requestDeletion() {
+    if (!active || busy || operation.current) return;
+    setDeleteTarget({ id: active.id, name: active.settings.devices[0]?.name || active.name });
+    setDeleteError(""); deleteDialog.current?.showModal();
+  }
+  async function removeSignage() {
+    if (!deleteTarget || operation.current || busy) return;
+    const target = deleteTarget;
+    operation.current = true; setBusy(true); setDeleting(true); setDeleteError("");
+    try {
+      await deleteDevice(target.id);
+      deletedIds.current.add(target.id); observed.current.delete(target.id);
+      const nextId = devices.find(row => row.id !== target.id && !deletedIds.current.has(row.id))?.id ?? "";
+      dirtyRef.current = false; setDirty(false); setDraft(null); setLoadedId(""); setOutputId("");
+      activeRef.current = nextId; setActiveId(nextId);
+      setDevices(rows => rows.filter(row => row.id !== target.id));
+      setView("home"); setError(""); setNote(""); setRemovalNotice(`「${target.name}」を削除しました。`);
+      deleteDialog.current?.close(); setDeleteTarget(null);
+      setReload(value => value + 1);
+    } catch (error) { setDeleteError(message(error)); }
+    finally { operation.current = false; setBusy(false); setDeleting(false); }
+  }
   const signageUrl = active ? `${appUrl("signage")}?device=${active.id}` : appUrl("signage");
   async function toggleDisplay() {
     if (!active || !draft || dirty) return;
@@ -270,11 +298,12 @@ function App() {
     </nav></div></AppHeader>
     <nav className="controller-breadcrumb" aria-label="現在のページ"><button type="button" onClick={() => setView("home")} aria-current={view === "home" ? "page" : undefined}>トップ</button>{view !== "home" && <><span>/</span><span aria-current="page">{view === "quick" ? "クイック設定" : view === "editor" ? "エディターで細かく編集" : "今の様子（画面共有）"}</span></>}</nav>
     <section className="page equipment-page">
+      {removalNotice && <p className="feedback" role="status">{removalNotice}</p>}
       {error && <p className="feedback error" role="alert">{error}</p>}
       {!!notifications.length && <details className="connection-notices"><summary>Signageの接続通知（{notifications.length}）</summary><ul aria-live="polite">{notifications.map((notice, index) => <li key={`${index}-${notice}`}>{notice}</li>)}</ul><button type="button" onClick={() => setNotifications([])}>通知を閉じる</button></details>}
       {active ? <>
         {!online && <p className="feedback">表示用のデバイスで<a href={signageUrl} target="_blank" rel="noreferrer">このSignageの専用URL</a>を開き、同じアカウントでログインしてください。</p>}
-        <p className="feedback" role="status">{busy ? "描画・記録の完了を待っています…" : note}</p>
+        <p className="feedback" role="status">{busy ? deleting ? "Signageを削除しています…" : "描画・記録の完了を待っています…" : note}</p>
         {conflict && <p className="feedback error" role="alert">他のControllerが更新しました。編集中の設定は保持しています。Supabaseから再読込して変更をやり直してください。</p>}
         {output && draft && config ? <section id="equipment-customization" aria-label={`${output.name}の設定`}>
           <div className="workspace-heading"><h1>{output.name}</h1><span className={online && connected ? "online" : "offline"}>● {online && connected ? active.display_enabled && output.enabled ? "表示中" : "表示停止中" : "接続待ち"}</span></div>
@@ -298,6 +327,7 @@ function App() {
               <div className="studio-buttons"><button type="button" disabled={!canEdit || dirty} onClick={() => void toggleDisplay()}>{active.display_enabled && output.enabled ? "表示を停止" : "表示を再開"}</button><button type="button" disabled={!canEdit || dirty} onClick={() => void operate("refresh", {})}>交通情報を更新</button><button type="button" disabled={busy} onClick={() => void refresh()}>保存済みの設定を再読込</button><button type="button" onClick={() => setView("live")}>今の様子を見る</button></div>
               <p className="control-help cloud-sync">{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "まだ画面の応答がありません"} · 確定リビジョン {active.revision}</p>
               <a className="preview-link" href={signageUrl} target="_blank" rel="noreferrer">このSignageを開く ↗</a><label>このSignageの専用URL<input readOnly value={signageUrl} onFocus={event => event.target.select()} /></label>
+              <div className="device-delete-control"><p>使わなくなったSignageを一覧から削除します。接続待ちの端末も削除できます。</p><button type="button" className="delete-signage-button" disabled={busy} onClick={requestDeletion}>このSignageを削除</button></div>
             </section></div>}
             <div className="workspace-save"><span>{dirty ? "未保存の変更があります" : "保存済み"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>保存</button></div>
           </form>}
@@ -308,6 +338,14 @@ function App() {
       {createdUrl ? <><p>Signageを追加しました。表示用デバイスでこのURLを開いてください。</p><label>専用URL<input readOnly value={createdUrl} onFocus={e => e.target.select()} /></label><a href={createdUrl} target="_blank" rel="noreferrer">新しいSignageを開く ↗</a></> : <form className="add-equipment-form" onSubmit={e => void addOutput(e)}><fieldset disabled={busy}>
         <label>デバイス名<input value={newName} maxLength={80} required onChange={event => setNewName(event.target.value)} /></label><p className="control-help">Signageは何台でも追加できます。別の画面には別の専用URLを使ってください。</p><button type="submit" className="control-button primary" disabled={!newName.trim()}>追加する</button></fieldset></form>}
       {note && <p role="status">{note}</p>}
+    </dialog>
+    <dialog ref={deleteDialog} className="device-dialog delete-signage-dialog" aria-labelledby="delete-signage-title" aria-describedby="delete-signage-description" onCancel={event => { if (deleting) event.preventDefault(); }}>
+      <div className="dialog-head"><h2 id="delete-signage-title">Signageを削除</h2><button type="button" aria-label="閉じる" disabled={deleting} onClick={() => deleteDialog.current?.close()}>×</button></div>
+      <p className="delete-signage-name">{deleteTarget?.name}</p>
+      <p id="delete-signage-description">このSignageの設定と操作履歴を削除します。この操作は取り消せません。表示用の端末は削除を確認すると案内画面に切り替わり、専用URLは使えなくなります。</p>
+      {dirty && <p>未保存の変更も破棄されます。</p>}
+      {deleteError && <p className="delete-signage-error" role="alert">{deleteError}</p>}
+      <div className="dialog-actions"><button type="button" autoFocus disabled={deleting} onClick={() => deleteDialog.current?.close()}>キャンセル</button><button type="button" className="delete-signage-button" disabled={deleting} onClick={() => void removeSignage()}>{deleting ? "削除中…" : "削除する"}</button></div>
     </dialog>
   </main>;
 }

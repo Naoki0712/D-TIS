@@ -39,7 +39,7 @@ alter table public.dtis_devices enable row level security;
 alter table public.dtis_events enable row level security;
 
 revoke all on public.dtis_devices, public.dtis_events from anon, authenticated;
-grant select, insert on public.dtis_devices to authenticated;
+grant select, insert, delete on public.dtis_devices to authenticated;
 grant update (settings, display_enabled, revision, refresh_version, last_seen_at, updated_at)
   on public.dtis_devices to authenticated;
 -- Event rows are append-only for application users: no UPDATE or DELETE grant.
@@ -55,6 +55,10 @@ drop policy if exists dtis_devices_update on public.dtis_devices;
 create policy dtis_devices_update on public.dtis_devices for update to authenticated
   using ((select auth.uid()) = owner_id)
   with check ((select auth.uid()) = owner_id);
+
+drop policy if exists dtis_devices_delete on public.dtis_devices;
+create policy dtis_devices_delete on public.dtis_devices for delete to authenticated
+  using ((select auth.uid()) = owner_id);
 
 drop policy if exists dtis_events_read on public.dtis_events;
 create policy dtis_events_read on public.dtis_events for select to authenticated
