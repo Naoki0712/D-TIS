@@ -1,6 +1,11 @@
 .signage-layout-surface { position: relative; container-type: inline-size; width: 100%; aspect-ratio: 16 / 9; background: #1d1d1d; color: #fff; isolation: isolate; overflow: hidden; }
 .signage-layout-part { position: absolute; min-width: 0; min-height: 0; overflow: hidden; }
 .signage-layout-part > .departure-pages { height: 100%; container-type: inline-size; }
+.signage-layout-part .layout-departure-pages { display: grid; min-height: 0; }
+.layout-board-frame { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.layout-board-frame + .layout-board-frame { border-top: 1px solid #555; }
+.layout-board-design { position: absolute; top: 0; left: 50%; width: 1600px; container-type: inline-size; transform: translateX(-50%) scale(var(--layout-board-scale, 0)); transform-origin: top center; }
+.signage-layout-surface .signage-layout-part .layout-board-design .departure-board { height: auto; min-height: 0; }
 .signage-layout-part .departure-board { height: 100%; padding: 2cqw; --board-number: 9cqw; --board-destination: 6cqw; --board-heading: 3.5cqw; --board-type: 4cqw; --board-icon: 9cqw; --board-secondary: 2cqw; }
 .signage-layout-part .route-heading { grid-template-columns: 7cqw minmax(0,1fr) minmax(0,1fr); gap: 2cqw; }
 .signage-layout-part .route-name p,.signage-layout-part .direction-name p { font-size: 2cqw; }

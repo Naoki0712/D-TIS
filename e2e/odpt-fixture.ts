@@ -24,7 +24,7 @@ export function odptFixture(url: URL): object[] {
   if (type === "odpt:StationTimetable") return [...stations, ginzaStation]
     .filter(row => row["odpt:railway"] === url.searchParams.get("odpt:railway"))
     .map(row => ({ "owl:sameAs": `table:${row["owl:sameAs"]}`, "odpt:railway": row["odpt:railway"],
-      "odpt:station": row["owl:sameAs"], "odpt:railDirection": direction, "odpt:calendar": "odpt.Calendar:Weekday",
+      "odpt:station": row["owl:sameAs"], "odpt:railDirection": direction, "odpt:calendar": "odpt.Calendar:Everyday",
       "odpt:stationTimetableObject": [{ "odpt:departureTime": "24:15", "odpt:destinationStation": [row["owl:sameAs"]] }] }));
   if (type === "odpt:BusroutePattern") return [{ "owl:sameAs": "odpt.BusroutePattern:Toei.Test", "odpt:busroute": "odpt.Busroute:Toei.Test", "dc:title": "テスト01", "odpt:busstopPoleOrder": [
     { "odpt:index": 1, "odpt:busstopPole": "odpt.BusstopPole:Toei.Test1", "odpt:note": "試験バス停" },

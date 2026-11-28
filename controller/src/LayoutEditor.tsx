@@ -2,7 +2,7 @@ import { useRef, useState, type PointerEvent } from "react";
 import type { DisplaySettings, PartTextStyle, SignageLayout, SignagePart, BoardTextField } from "../../shared/display-settings";
 import { boardTextNames, defaultTextStyle, fitPart, initialLayout, partNames, snap } from "../../shared/signage-layout";
 import { SignagePartContent, partPosition } from "../../signage/src/SignageParts";
-import { japanTime } from "../../signage/src/departures";
+import { displayPages, japanTime } from "../../signage/src/departures";
 import type { OdptData } from "../../signage/src/types";
 import { useDisplayFont } from "../../shared/fonts";
 import { TickerEditor } from "./TickerEditor";
@@ -18,6 +18,9 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
   const [selectedField, setSelectedField] = useState<BoardTextField | null>(null);
   const [fieldDefault, setFieldDefault] = useState(defaultTextStyle);
   const [grid, setGrid] = useState(true);
+  const [previewPageIndex, setPreviewPageIndex] = useState(0);
+  const previewPages = displayPages(settings.selectedRoutes, settings.directionDisplayMode);
+  const previewPage = Math.min(previewPageIndex, Math.max(0, previewPages.length - 1));
   const [historyVersion, setHistoryVersion] = useState(0);
   const history = useRef<{ past: SignageLayout[]; future: SignageLayout[] }>({ past: [], future: [] });
   const latest = useRef({ settings, layout, onChange }); latest.current = { settings, layout, onChange };
@@ -57,7 +60,8 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
       setSelectedField(target?.dataset.editField as BoardTextField || null);
       if (target) {
         const computed = getComputedStyle(target), rgb = computed.color.match(/\d+/g);
-        setFieldDefault({ ...defaultTextStyle, fontSize: Math.max(12,Math.min(240,Math.round(parseFloat(computed.fontSize) * 1600 / event.currentTarget.getBoundingClientRect().width))),
+        const designWidth = target.closest<HTMLElement>(".layout-board-design")?.clientWidth || event.currentTarget.getBoundingClientRect().width;
+        setFieldDefault({ ...defaultTextStyle, fontSize: Math.max(12,Math.min(240,Math.round(parseFloat(computed.fontSize) * 1600 / designWidth))),
           color: rgb ? `#${rgb.slice(0,3).map(n => Number(n).toString(16).padStart(2,"0")).join("")}` : "#ffffff", weight: Number(computed.fontWeight) >= 600 ? 700 : 400 });
       }
     }
@@ -88,6 +92,9 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
       <h3>レイヤー</h3><ol className="part-layers">{layout.parts.map((p, index) => <li key={p.id}><button type="button" aria-pressed={selectedId === p.id} onClick={() => { setSelectedId(p.id); setSelectedField(null); }}>{index + 1}. {p.kind === "text" ? p.text?.slice(0, 16) || "テキスト" : partNames[p.kind]}</button></li>)}</ol>
     </aside>
     <div className="layout-workspace">
+      {previewPages.length > 1 && <label className="layout-preview-page">編集する表示ページ<select aria-label="編集する表示ページ" value={previewPage} onChange={e => { setPreviewPageIndex(Number(e.target.value)); setSelectedId(""); setSelectedField(null); }}>
+        {previewPages.map((routes, index) => <option key={index} value={index}>{index + 1} / {previewPages.length} · {routes.map(route => data?.timetables.find(t => t.railway === route.railway && t.station === route.station && t.direction === route.direction)?.directionName || route.direction.split(".").at(-1)).join("・")}</option>)}
+      </select></label>}
       {selected ? <div className="part-popover" role="region" aria-label="選択したパーツの編集"><div className="part-toolbar" role="toolbar" aria-label="パーツの書式">
         <strong>{selectedField ? boardTextNames[selectedField] : partNames[selected.kind]}</strong>
         {(selected.kind === "text" || selected.kind === "clock" || selectedField) && <>
@@ -126,7 +133,7 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
             const offset = e.shiftKey ? 10 : 2;
             if (e.key.startsWith("Arrow")) { e.preventDefault(); commit({ parts: layout.parts.map(p => p.id === part.id ? fitPart({ ...p, x: p.x + (e.key === "ArrowLeft" ? -offset : e.key === "ArrowRight" ? offset : 0), y: p.y + (e.key === "ArrowUp" ? -offset : e.key === "ArrowDown" ? offset : 0) }) : p) }); }
           }}>
-          <div className="editor-part-content"><SignagePartContent part={part} settings={settings} data={data} now={japanTime(new Date())} /></div>
+          <div className="editor-part-content"><SignagePartContent part={part} settings={settings} data={data} now={japanTime(new Date())} pageRoutes={previewPages[previewPage]} /></div>
           {selectedId === part.id && !disabled && <div className="part-resize" role="button" aria-label="パーツの大きさを変更" onPointerDown={e => start(e, part, true)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} />}
         </div>)}
       </div>
