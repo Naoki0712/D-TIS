@@ -182,3 +182,38 @@ test("lost commit responses reconcile by exact event; absence stays pending unti
   await asUser(other);
   await assert.rejects(resolve(events[0].command_id, 0), /device_not_found/);
 });
+
+test("only the owner can delete a Signage and cascade its history without affecting other devices", async () => {
+  await asUser();
+  const id = crypto.randomUUID(), commandId = crypto.randomUUID();
+  await db.query("insert into public.dtis_devices(id,owner_id,name,settings) values ($1,$2,'remove me',$3)", [id, owner, JSON.stringify(settings)]);
+  await db.query(`select * from public.dtis_commit_applied($1,$2,'display',0,now(),$3,false,0,now())`, [id, commandId, JSON.stringify(settings)]);
+  const preserved = await state();
+  await asUser(other);
+  assert.deepEqual((await db.query("delete from public.dtis_devices where id=$1 returning id", [id])).rows, []);
+  await asUser("", "anon");
+  await assert.rejects(db.query("delete from public.dtis_devices where id=$1", [id]), /permission denied/);
+  await asUser();
+  assert.equal((await db.query("select * from public.dtis_events where device_id=$1", [id])).rows.length, 1);
+  assert.deepEqual((await db.query("delete from public.dtis_devices where id=$1 returning id", [id])).rows, [{ id }]);
+  assert.deepEqual((await db.query("delete from public.dtis_devices where id=$1 returning id", [id])).rows, []);
+  assert.deepEqual((await db.query("select * from public.dtis_events where device_id=$1", [id])).rows, []);
+  assert.deepEqual(await state(), preserved);
+  await assert.rejects(db.query("select public.dtis_heartbeat($1)", [id]), /device_not_found/);
+  await assert.rejects(db.exec("delete from public.dtis_events"), /permission denied/);
+});
+
+test("the additive deletion upgrade restores owner-only removal on an existing setup and can be rerun", async () => {
+  await db.exec("reset role; revoke delete on public.dtis_devices from authenticated; drop policy dtis_devices_delete on public.dtis_devices;");
+  const upgrade = await readFile(new URL("../device-delete-upgrade.sql", import.meta.url), "utf8");
+  const before = (await db.query("select id from public.dtis_devices order by id")).rows;
+  await db.exec(upgrade); await db.exec(upgrade);
+  assert.deepEqual((await db.query("select id from public.dtis_devices order by id")).rows, before);
+  await asUser();
+  const id = crypto.randomUUID();
+  await db.query("insert into public.dtis_devices(id,owner_id,name,settings) values ($1,$2,'upgrade test',$3)", [id, owner, JSON.stringify(settings)]);
+  await asUser(other);
+  assert.deepEqual((await db.query("delete from public.dtis_devices where id=$1 returning id", [id])).rows, []);
+  await asUser();
+  assert.deepEqual((await db.query("delete from public.dtis_devices where id=$1 returning id", [id])).rows, [{ id }]);
+});

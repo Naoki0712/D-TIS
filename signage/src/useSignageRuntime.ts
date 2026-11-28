@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { flushSync } from "react-dom";
 import type { OdptData, SignageState } from "./types";
 import { effectiveDisplaySettings, selectOutput } from "../../shared/display-settings";
-import { CloudCommitError, commitApplied, getCloudClient, getDevice, heartbeatDevice, announceDeviceConnection, parseCommand, parseDeviceRecord,
+import { CloudCommitError, DeviceUnavailableError, commitApplied, getCloudClient, getDevice, heartbeatDevice, announceDeviceConnection, parseCommand, parseDeviceRecord,
   readCloudConfig, reconcileApplied, registerDevice, subscribeDevice, type Command, type DeviceChannel, type DeviceRecord } from "../../shared/cloud";
 import { loadOdptData } from "../../shared/browser-odpt";
 import { prepareContent } from "./prepare-content";
@@ -35,34 +35,49 @@ export function useSignageRuntime() {
   const [data, setData] = useState<OdptData | null>(null);
   const [channel, setChannel] = useState<DeviceChannel | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [deviceUnavailable, setDeviceUnavailable] = useState(false);
 
   useEffect(() => {
     const lifetime = new AbortController();
     let current: DeviceRecord | null = null, currentData: OdptData | null = null;
     let wire: DeviceChannel | null = null, busy = false, dataBusy = false, polling = false;
     let heartbeat = 0, update = 0, retry = 0;
+    let unavailable = false;
+    setDeviceUnavailable(false);
     let pending: { command: Command; staged: DeviceRecord; data: OdptData | null } | null = null;
     const stopped = new Promise<void>(resolve => lifetime.signal.addEventListener("abort", () => resolve(), { once: true }));
     const completed = new Map<string, DeviceRecord>();
     let cacheKey = "";
+    function markUnavailable() {
+      if (lifetime.signal.aborted || unavailable) return;
+      unavailable = true; current = null; currentData = null; pending = null; completed.clear();
+      window.clearInterval(heartbeat); window.clearInterval(update); window.clearTimeout(retry);
+      try { localStorage.removeItem(cacheKey); } catch { /* The unavailable state still clears the visible display. */ }
+      void wire?.close(); wire = null;
+      flushSync(() => { setDevice(null); setData(null); setChannel(null); setConnectionError(null); setDeviceUnavailable(true); });
+    }
     function remember(record: DeviceRecord) {
+      if (unavailable) return;
       try { localStorage.setItem(cacheKey, JSON.stringify(record)); } catch { /* Cloud remains authoritative when local storage is full. */ }
     }
     async function readData(record: DeviceRecord, force = false) {
       return loadOdptData(effectiveDisplaySettings(record.settings, outputId), undefined, lifetime.signal, force);
     }
     function render(record: DeviceRecord, nextData: OdptData | null) {
-      if (lifetime.signal.aborted) return;
+      if (lifetime.signal.aborted || unavailable) return;
       flushSync(() => { setDevice(record); setData(nextData); });
     }
     async function receipt(command: Command, saved: DeviceRecord, nextData: OdptData | null) {
-      if (lifetime.signal.aborted) return;
+      if (lifetime.signal.aborted || unavailable) return;
       current = saved; currentData = nextData; remember(saved); render(saved, nextData);
       completed.set(command.id, saved);
       if (completed.size > 80) completed.delete(completed.keys().next().value!);
       setConnectionError(null);
-      const confirmed = await getDevice(saved.id).catch(() => saved);
-      if (lifetime.signal.aborted) return;
+      const confirmed = await getDevice(saved.id).catch(error => {
+        if (error instanceof DeviceUnavailableError) throw error;
+        return saved;
+      });
+      if (lifetime.signal.aborted || unavailable) return;
       if (confirmed.revision > saved.revision) {
         try {
           const refreshed = await readData(confirmed);
@@ -134,7 +149,8 @@ export function useSignageRuntime() {
         committed = true;
         await receipt(command, saved, nextData);
       } catch (error) {
-        if (lifetime.signal.aborted) return;
+        if (lifetime.signal.aborted || unavailable) return;
+        if (error instanceof DeviceUnavailableError) { markUnavailable(); return; }
         if (committed) {
           setConnectionError("Supabaseには記録済みです。Controllerで最新状態を再照会してください。");
           return;
@@ -143,7 +159,10 @@ export function useSignageRuntime() {
           // A lost HTTP response does not establish whether COMMIT succeeded.
           pending = { command, staged, data: nextData };
           try { await resolvePending(); if (!pending) return; }
-          catch { /* Resolve again after the connection recovers. */ }
+          catch (resolutionError) {
+            if (resolutionError instanceof DeviceUnavailableError) { markUnavailable(); return; }
+            /* Resolve again after the connection recovers. */
+          }
           if (!(error instanceof CloudCommitError && error.outcome === "rejected")) {
             setConnectionError("Supabaseへの記録結果を確認しています。通信復旧後に自動で照会します。");
             await wire.send({ type: "pending", commandId: command.id, error: "記録結果を照会中です。次の操作をお待ちください。" }).catch(() => {});
@@ -181,7 +200,10 @@ export function useSignageRuntime() {
           current = record; currentData = next; remember(record); render(record, next);
         }
         await heartbeatDevice(record.id);
-      } catch (error) { if (!lifetime.signal.aborted) setConnectionError(`Supabaseに再接続しています。現在の表示を継続します。${message(error)}`); }
+      } catch (error) {
+        if (error instanceof DeviceUnavailableError) markUnavailable();
+        else if (!lifetime.signal.aborted && !unavailable) setConnectionError(`Supabaseに再接続しています。現在の表示を継続します。${message(error)}`);
+      }
       finally { polling = false; }
     }
     async function start() {
@@ -194,8 +216,11 @@ export function useSignageRuntime() {
       }
       let id = requestedDeviceId ?? localStorage.getItem(identityKey);
       if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
-        id = crypto.randomUUID(); localStorage.setItem(identityKey, id);
+        id = crypto.randomUUID();
+        sessionStorage.setItem(`d-tis.signage.registration.${id}`, "pending");
+        localStorage.setItem(identityKey, id);
       }
+      const registrationKey = `d-tis.signage.registration.${id}`;
       cacheKey = `d-tis.signage.applied.${id}`;
       const run = async () => {
         if (lifetime.signal.aborted) return;
@@ -208,13 +233,14 @@ export function useSignageRuntime() {
           }
         } catch { /* Invalid snapshots never prevent a cloud restore. */ }
         const connect = async () => {
-          if (lifetime.signal.aborted) return;
+          if (lifetime.signal.aborted || unavailable) return;
           let connectingWire: DeviceChannel | null = null;
           try {
-            // Explicit links identify an already registered Signage. Never create
-            // an unknown UUID here, or another account's link could be mistaken
-            // for a new screen when its row is hidden by RLS.
-            const record = requestedDeviceId ? await getDevice(id!) : await registerDevice(id!, `Signage ${id!.slice(0, 8)}`);
+            // Only a freshly generated browser ID may register. Reusing a known
+            // ID after deletion must never silently recreate that Signage.
+            const record = !requestedDeviceId && sessionStorage.getItem(registrationKey) === "pending"
+              ? await registerDevice(id!, `Signage ${id!.slice(0, 8)}`) : await getDevice(id!);
+            sessionStorage.removeItem(registrationKey);
             const nextData = await readData(record);
             if (lifetime.signal.aborted) return;
             current = record; currentData = nextData; remember(record); render(record, nextData);
@@ -223,7 +249,7 @@ export function useSignageRuntime() {
               const command = parseCommand(packet);
               if (command) void apply(command).catch(error => { if (!lifetime.signal.aborted) setConnectionError(message(error)); });
               else if (typeof packet.id === "string") void wire?.send({ type: "reject", commandId: packet.id, error: "操作が期限切れ、または設定内容が不正です。画面を更新して再試行してください。" }).catch(() => {});
-            }, status => { if (!lifetime.signal.aborted) setConnectionError(status === "SUBSCRIBED" ? null : "操作用の接続を復旧しています。表示は継続します。"); });
+            }, status => { if (!lifetime.signal.aborted && !unavailable) setConnectionError(status === "SUBSCRIBED" ? null : "操作用の接続を復旧しています。表示は継続します。"); });
             if (lifetime.signal.aborted) { await connectingWire.close(); return; }
             wire = connectingWire; setChannel(wire);
             const connectedRecord = await announceDeviceConnection(id!);
@@ -237,7 +263,8 @@ export function useSignageRuntime() {
             update = window.setInterval(() => void refreshData(), 60000);
           } catch (error) {
             await connectingWire?.close();
-            if (!lifetime.signal.aborted) { setConnectionError(`接続を再試行しています。${message(error)}`); retry = window.setTimeout(() => void connect(), 7000); }
+            if (error instanceof DeviceUnavailableError) markUnavailable();
+            else if (!lifetime.signal.aborted && !unavailable) { setConnectionError(`接続を再試行しています。${message(error)}`); retry = window.setTimeout(() => void connect(), 7000); }
           }
         };
         void connect();
@@ -266,6 +293,6 @@ export function useSignageRuntime() {
     controllerUrls: [], displayEnabled: device.display_enabled, refreshVersion: device.refresh_version,
     settingsVersion: String(device.revision), pendingPower: null, powerError: null } : null;
   return { facility: facility ? { ...facility, ...effectiveDisplaySettings(facility, outputId) } : null,
-    selectedOutput, outputMissing: !!facility && !!outputId && !selectedOutput, data, state, channel,
+    selectedOutput, outputMissing: !!facility && !!outputId && !selectedOutput, data, state, channel, deviceUnavailable,
     localDisplay: false, connectionError, pairingBusy: false, pairController: () => {} };
 }

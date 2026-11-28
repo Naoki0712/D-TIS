@@ -1,4 +1,13 @@
 body:has(.equipment-controller) { background: #c8c8c8; }
+.device-delete-control { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #555; }
+.device-delete-control p { margin: 0; color: #ccc; font-size: 14px; line-height: 1.7; }
+.equipment-controller .delete-signage-button { padding: 12px 20px; border: 1px solid #da7070; border-radius: 8px; color: #fff; background: #952c2c; font-size: 16px; }
+.equipment-controller .delete-signage-button:hover { background: #ad3333; }
+.equipment-controller .delete-signage-button:disabled { opacity: .5; cursor: default; }
+.delete-signage-dialog p { line-height: 1.8; overflow-wrap: anywhere; }
+.delete-signage-dialog .delete-signage-name { margin: 24px 0 12px; font-size: 24px; font-weight: 700; }
+.delete-signage-dialog .delete-signage-error { color: #ffb3b3; }
+.delete-signage-dialog .dialog-actions { flex-wrap: wrap; }
 .equipment-controller { background: #c8c8c8; color: #1d1d1d; padding-bottom: 0; }
 .controller-breadcrumb { min-height: 35px; padding: 4px 25px; display: flex; align-items: center; gap: 12px; background: #535353; color: #fff; font-size: 20px; }
 .controller-breadcrumb button { padding: 0; background: transparent; color: inherit; border: 0; font-size: inherit; }

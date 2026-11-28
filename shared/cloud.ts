@@ -80,6 +80,7 @@ export function getCloudClient(): SupabaseClient {
 }
 
 function failure(error: { message: string; code?: string }): Error {
+  if (error.code === "42501" && error.message === "device_not_found") return new DeviceUnavailableError();
   if (error.message.includes("revision_conflict")) return new Error("別の操作が先に反映されました。最新の設定を読み直してください。");
   if (error.message.includes("command_expired")) return new Error("操作の有効期限が切れました。もう一度操作してください。");
   if (["42P01", "PGRST202", "PGRST205"].includes(error.code ?? "")) return new Error("Supabaseの初期設定SQLを実行してください。");
@@ -115,8 +116,28 @@ export async function listDevices(): Promise<DeviceRecord[]> {
 
 export async function getDevice(id: string): Promise<DeviceRecord> {
   const { data, error } = await getCloudClient().from("dtis_devices").select("*").eq("id", id).single();
+  if (error?.code === "PGRST116" || !error && !data) throw new DeviceUnavailableError();
   if (error) throw failure(error);
   return parseDeviceRecord(data);
+}
+
+/** Confirmed absence is distinct from a temporary network or authentication failure. */
+export class DeviceUnavailableError extends Error {
+  constructor() { super("このSignageは削除されたか、アクセスできません。"); }
+}
+
+export async function deleteDevice(id: string): Promise<void> {
+  const { data, error } = await getCloudClient().from("dtis_devices").delete().eq("id", id).select("id");
+  if (!error && data?.some(row => row.id === id)) return;
+  // An empty DELETE can mean a missing RLS policy. A lost response can also mean
+  // the deletion already committed. Only confirmed absence counts as success.
+  try { await getDevice(id); }
+  catch (lookupError) { if (lookupError instanceof DeviceUnavailableError) return; throw error ? failure(error) : lookupError; }
+  if (error) {
+    if (error.code === "42501") throw new Error("削除権限がありません。管理者がsupabase/device-delete-upgrade.sqlを実行したか確認してください。");
+    throw failure(error);
+  }
+  throw new Error("Signageを削除できませんでした。管理者がsupabase/device-delete-upgrade.sqlを実行したか確認してください。");
 }
 
 export async function registerDevice(id: string, name: string, outputName = "メイン画面"): Promise<DeviceRecord> {
