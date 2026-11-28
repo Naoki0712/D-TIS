@@ -10,11 +10,18 @@ export function fitPart(part: SignagePart): SignagePart {
   return { ...part, width, height, x: Math.max(0, Math.min(100 - width, part.x)), y: Math.max(0, Math.min(100 - height, part.y)) };
 }
 export function initialLayout(settings: DisplaySettings): SignageLayout {
+  const hasTicker = !!settings.tickerText.trim() || !!settings.ticker?.segments.some(segment => segment.text.trim());
+  const hasMedia = !!settings.media?.length;
+  const alongside = hasMedia && settings.mediaLayout !== "alternating" && settings.selectedRoutes.length > 0;
+  const height = hasTicker ? 88 : 100;
   return { parts: [
-    { id: "departures", kind: "departures", x: 0, y: 0, width: settings.media?.length ? 66 : 100, height: 86 },
-    ...(settings.media?.length ? [{ id: "media", kind: "media" as const, x: 68, y: 0, width: 32, height: 86 }] : []),
-    { id: "ticker", kind: "ticker", x: 0, y: 88, width: 100, height: 12 },
+    ...(settings.selectedRoutes.length || !hasMedia ? [{ id: "departures", kind: "departures" as const, x: 0, y: 0, width: alongside ? 66 : 100, height }] : []),
+    ...(hasMedia ? [{ id: "media", kind: "media" as const, x: alongside ? 68 : 0, y: 0, width: alongside ? 32 : 100, height }] : []),
+    ...(hasTicker ? [{ id: "ticker", kind: "ticker" as const, x: 0, y: 88, width: 100, height: 12 }] : []),
   ] };
+}
+export function effectiveLayout(settings: DisplaySettings): SignageLayout {
+  return settings.layout ?? initialLayout(settings);
 }
 function invalidLayout(): never { throw new Error("パーツの位置・大きさ・文字設定を確認してください。"); }
 function parseTextStyle(value: unknown): PartTextStyle {

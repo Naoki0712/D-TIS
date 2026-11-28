@@ -1,11 +1,12 @@
 import { useRef, useState, type PointerEvent } from "react";
 import type { DisplaySettings, PartTextStyle, SignageLayout, SignagePart, BoardTextField } from "../../shared/display-settings";
-import { boardTextNames, defaultTextStyle, fitPart, initialLayout, partNames, snap } from "../../shared/signage-layout";
+import { boardTextNames, defaultTextStyle, effectiveLayout, fitPart, initialLayout, partNames, snap } from "../../shared/signage-layout";
 import { SignagePartContent, partPosition } from "../../signage/src/SignageParts";
 import { displayPages, japanTime } from "../../signage/src/departures";
 import type { OdptData } from "../../signage/src/types";
 import { useDisplayFont } from "../../shared/fonts";
 import { TickerEditor } from "./TickerEditor";
+import { SignageScreen } from "../../signage/src/SignageScreen";
 import "../../shared/signage-layout.css";
 import "../../signage/src/styles.css";
 import "../../signage/src/studio.css";
@@ -13,11 +14,13 @@ import "../../signage/src/studio.css";
 export function LayoutEditor({ settings, data, disabled, onChange }: {
   settings: DisplaySettings; data: OdptData | null; disabled: boolean; onChange(settings: DisplaySettings): void;
 }) {
-  const layout = settings.layout ?? initialLayout(settings);
+  const layout = effectiveLayout(settings);
   const [selectedId, setSelectedId] = useState("");
   const [selectedField, setSelectedField] = useState<BoardTextField | null>(null);
   const [fieldDefault, setFieldDefault] = useState(defaultTextStyle);
   const [grid, setGrid] = useState(true);
+  const [previewMedia, setPreviewMedia] = useState(false);
+  const layers = useRef<HTMLDetailsElement>(null);
   const [previewPageIndex, setPreviewPageIndex] = useState(0);
   const previewPages = displayPages(settings.selectedRoutes, settings.directionDisplayMode);
   const previewPage = Math.min(previewPageIndex, Math.max(0, previewPages.length - 1));
@@ -83,15 +86,17 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
     dragging.current = null;
   }
   return <section className="layout-editor" aria-label="Signageレイアウトエディター" data-history={historyVersion}>
-    <aside className="parts-palette"><h2>パーツ</h2>
+    <aside className="parts-palette" aria-label="編集メニュー"><div className="palette-add-row"><h2>パーツ</h2>
       {(Object.keys(partNames) as SignagePart["kind"][]).map(kind => <button type="button" key={kind} disabled={disabled || layout.parts.length >= 50} onClick={() => add(kind)}>＋ {partNames[kind]}</button>)}
+      </div><div className="palette-tools-row">
       <label className="studio-check"><input type="checkbox" checked={grid} onChange={e => setGrid(e.target.checked)} />グリッドを表示</label>
-      <p>ドラッグで移動、右下のハンドルで拡大・縮小。矢印キーでも移動できます。</p>
       <div className="layout-history"><button type="button" disabled={disabled || !history.current.past.length} onClick={() => undo()}>元に戻す</button><button type="button" disabled={disabled || !history.current.future.length} onClick={() => undo(true)}>やり直す</button></div>
-      <button type="button" disabled={disabled || !settings.layout} onClick={() => { onChange({ ...settings, layout: undefined }); setSelectedId(""); }}>標準レイアウトに戻す</button>
-      <h3>レイヤー</h3><ol className="part-layers">{layout.parts.map((p, index) => <li key={p.id}><button type="button" aria-pressed={selectedId === p.id} onClick={() => { setSelectedId(p.id); setSelectedField(null); }}>{index + 1}. {p.kind === "text" ? p.text?.slice(0, 16) || "テキスト" : partNames[p.kind]}</button></li>)}</ol>
+      <button type="button" disabled={disabled || !settings.layout} onClick={() => { commit(initialLayout(settings)); setSelectedId(""); }}>初期配置に戻す</button>
+      <details ref={layers} className="palette-layers"><summary>レイヤー</summary><ol className="part-layers">{layout.parts.map((p, index) => <li key={p.id}><button type="button" aria-pressed={selectedId === p.id} onClick={() => { setSelectedId(p.id); setSelectedField(null); if (p.kind === "media") setPreviewMedia(true); if (p.kind === "departures") setPreviewMedia(false); layers.current?.removeAttribute("open"); }}>{index + 1}. {p.kind === "text" ? p.text?.slice(0, 16) || "テキスト" : partNames[p.kind]}</button></li>)}</ol></details>
+      </div>
     </aside>
     <div className="layout-workspace">
+      {settings.mediaLayout === "alternating" && !!settings.media?.length && <label className="layout-preview-page">表示内容<select aria-label="プレビューの表示内容" value={previewMedia ? "media" : "departures"} onChange={e => setPreviewMedia(e.target.value === "media")}><option value="departures">交通案内</option><option value="media">写真・動画</option></select></label>}
       {previewPages.length > 1 && <label className="layout-preview-page">編集する表示ページ<select aria-label="編集する表示ページ" value={previewPage} onChange={e => { setPreviewPageIndex(Number(e.target.value)); setSelectedId(""); setSelectedField(null); }}>
         {previewPages.map((routes, index) => <option key={index} value={index}>{index + 1} / {previewPages.length} · {routes.map(route => data?.timetables.find(t => t.railway === route.railway && t.station === route.station && t.direction === route.direction)?.directionName || route.direction.split(".").at(-1)).join("・")}</option>)}
       </select></label>}
@@ -121,9 +126,10 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
       {selected.kind === "ticker" && <details className="part-ticker-options"><summary>スクロール文の文字・点滅を編集</summary><TickerEditor settings={settings} disabled={disabled} onChange={onChange} /></details>}
       <details className="part-geometry"><summary>位置と大きさ</summary><div>{([['x','左から'],['y','上から'],['width','幅'],['height','高さ']] as const).map(([key,label]) => <label key={key}>{label}（%）<input type="number" min={key === "width" ? 8 : key === "height" ? 6 : 0} max={100} step={2} value={selected[key]} disabled={disabled} onChange={e => patch({ [key]: Number(e.target.value) })} /></label>)}</div></details>
       </div> : <p className="canvas-hint">パーツを選ぶと、文字・配置の編集メニューが開きます。16:9 / 2%刻み</p>}
-      <div ref={canvas} style={fontStyle} className={`signage-layout-surface editor-canvas${grid ? " show-grid" : ""}`} aria-label="Signageの編集キャンバス" onPointerDown={() => setSelectedId("")}>
+      <SignageScreen settings={settings} data={data} now={japanTime(new Date())} pageRoutes={previewPages[previewPage] ?? []} editing grid={grid} stageRef={canvas} style={fontStyle}>
         {layout.parts.map(part => <div key={part.id} className={`signage-layout-part editor-part${selectedId === part.id ? " is-selected" : ""}`} style={partPosition(part)}
           role="button" tabIndex={0} aria-label={`${partNames[part.kind]}パーツ ${part.id}`} aria-pressed={selectedId === part.id}
+          hidden={settings.mediaLayout === "alternating" && !!settings.media?.length && (part.kind === "media" ? !previewMedia : part.kind === "departures" && previewMedia)}
           onFocus={() => setSelectedId(part.id)} onPointerDown={e => start(e, part)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} onLostPointerCapture={finish}
           onKeyDown={e => {
             if (disabled) return;
@@ -136,8 +142,8 @@ export function LayoutEditor({ settings, data, disabled, onChange }: {
           <div className="editor-part-content"><SignagePartContent part={part} settings={settings} data={data} now={japanTime(new Date())} pageRoutes={previewPages[previewPage]} /></div>
           {selectedId === part.id && !disabled && <div className="part-resize" role="button" aria-label="パーツの大きさを変更" onPointerDown={e => start(e, part, true)} onPointerMove={move} onPointerUp={finish} onPointerCancel={finish} />}
         </div>)}
-      </div>
-      <p className="canvas-caption">編集中のプレビューです。「Signageに反映して記録」で保存します。</p>
+      </SignageScreen>
+      <p className="canvas-caption">表示中の画面をそのまま編集できます。変更後は「保存」を押してください。</p>
     </div>
   </section>;
 }

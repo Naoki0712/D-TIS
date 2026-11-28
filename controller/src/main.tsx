@@ -11,7 +11,6 @@ import { RouteEditor } from "./RouteEditor";
 import { ContentEditor } from "./ContentEditor";
 import { LayoutEditor } from "./LayoutEditor";
 import { ServiceEditor } from "./ServiceEditor";
-import { initialLayout } from "../../shared/signage-layout";
 import type { OdptData } from "../../signage/src/types";
 import type { CatalogLine } from "./catalog";
 import "@fontsource/inter/700.css";
@@ -68,6 +67,7 @@ function App() {
   const canEdit = !!active && !!channel && loadedId === activeId && channelDeviceId === activeId && connected && online && !busy;
   const conflict = !!active && dirty && active.revision !== baseRevision;
   const previewSelection = JSON.stringify(config?.selectedRoutes ?? []);
+  useEffect(() => { window.scrollTo(0, 0); }, [view, activeId]);
 
   useEffect(() => {
     if (view !== "editor" || !config) return;
@@ -280,7 +280,7 @@ function App() {
           <div className="workspace-heading"><h1>{output.name}</h1><span className={online && connected ? "online" : "offline"}>● {online && connected ? active.display_enabled && output.enabled ? "表示中" : "表示停止中" : "接続待ち"}</span></div>
           {(view === "home" || view === "live") && <div className={`controller-overview${view === "live" ? " live-expanded" : ""}`}>
             {view === "home" && <div className="workspace-shortcuts"><button type="button" className="workspace-card quick-card" onClick={() => setView("quick")}><span className="card-symbol" aria-hidden="true">≡</span><strong>クイック設定</strong><span>路線・乗り物・スクロール文<br />写真・動画・デバイス設定など</span><span className="card-arrow" aria-hidden="true">↗</span></button>
-              <button type="button" className="workspace-card editor-card" onClick={() => { setView("editor"); if (!config.layout && canEdit && !conflict) edit(withOutputSettings(draft, output.id, { ...config, layout: initialLayout(config) })); }}><span className="card-symbol" aria-hidden="true">⊞</span><strong>エディターで<br />細かく編集する</strong><span>パーツを置いて、画面をデザイン</span><span className="card-arrow" aria-hidden="true">↗</span></button></div>}
+              <button type="button" className="workspace-card editor-card" onClick={() => setView("editor")}><span className="card-symbol" aria-hidden="true">⊞</span><strong>エディターで<br />細かく編集する</strong><span>パーツを置いて、画面をデザイン</span><span className="card-arrow" aria-hidden="true">↗</span></button></div>}
             <section className="current-screen"><header><h2>今の様子<span>（画面共有）</span></h2><button type="button" onClick={() => setView(view === "live" ? "home" : "live")}>{view === "live" ? "一覧に戻る" : "大きく表示"}</button></header><LivePreview key={activeId} channel={channel} online={online && connected} />
               <p className="screen-response">{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "Signageの接続を待っています"}</p></section>
           </div>}
@@ -299,7 +299,7 @@ function App() {
               <p className="control-help cloud-sync">{active.last_seen_at ? `最終応答 ${time(active.last_seen_at)}` : "まだ画面の応答がありません"} · 確定リビジョン {active.revision}</p>
               <a className="preview-link" href={signageUrl} target="_blank" rel="noreferrer">このSignageを開く ↗</a><label>このSignageの専用URL<input readOnly value={signageUrl} onFocus={event => event.target.select()} /></label>
             </section></div>}
-            <div className="workspace-save"><span>{dirty ? "未保存の変更があります" : "保存済み"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>Signageに反映して記録</button></div>
+            <div className="workspace-save"><span>{dirty ? "未保存の変更があります" : "保存済み"}</span><button type="submit" disabled={!dirty || !canEdit || conflict}>保存</button></div>
           </form>}
         </section> : <p>この端末にデバイスを追加してください。</p>}
       </> : <div className="equipment-empty"><h1>Signageを開いてください</h1><p>Signageで同じアカウントにログインすると、ここに端末が表示されます。</p><a className="open-signage" href={appUrl("signage")} target="_blank" rel="noreferrer">Signageを開く ↗</a></div>}

@@ -37,3 +37,21 @@
 .signage-layout-surface .signage-layout-part .departure-delayed small { font-size: calc(var(--board-number) * .21); }
 .signage-content.custom-layout { display: grid; place-items: center; overflow: hidden; }
 .signage-content.custom-layout .signage-layout-surface { max-height: 100%; width: min(100%,calc(var(--board-unit,1vh) * 177.7778)); flex: none; }
+.signage-screen > .signage-display-header { position: absolute; inset: 0 0 auto; height: 12.5%; min-height: 0; padding: 0 2cqw; --display-secondary: 2cqw; }
+.signage-screen .app-facility { padding: 0; }
+.signage-screen .signage-display-header .app-facility { order: 0; }
+.signage-screen .app-facility strong { font-size: 3cqw; }
+.signage-screen .app-facility span { font-size: 2cqw; margin-top: .2cqw; }
+.signage-screen .signage-display-header > time { order: 1; font-size: 5cqw; }
+.layout-parts-stage { position: absolute; top: 12.5%; left: 0; width: 100%; height: 87.5%; container-type: inline-size; }
+.layout-parts-stage > .odpt-empty { height: 100%; padding: 3cqw; }
+.signage-layout-part .part-empty { height: 100%; padding: 3cqw; }
+.signage-layout-part .part-empty h2 { font-size: 3.6cqw; }
+.signage-layout-part .part-empty p,.signage-layout-part .part-empty > span { font-size: 1.6cqw; }
+.signage-screen .screen-page-indicator { position: absolute; right: 2cqw; bottom: 14%; margin: 0; font-size: 1.3cqw; pointer-events: none; }
+.signage-layout-part[hidden] { display: none; }
+.signage-layout-part .rich-ticker[data-size=small] { font-size: 2.4cqw; }
+.signage-layout-part .rich-ticker[data-size=large] { font-size: 3.8cqw; }
+.signage { height: 100svh; }
+.signage-content.unified-layout { display: grid; justify-items: center; align-items: start; overflow: hidden; }
+.signage-content.unified-layout > .signage-screen { max-height: 100%; width: min(100%,calc(var(--board-unit,1vh) * 177.7778)); }
