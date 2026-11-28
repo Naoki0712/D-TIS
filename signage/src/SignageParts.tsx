@@ -7,6 +7,7 @@ import { DepartureBoard } from "./DepartureBoard";
 import { RichTicker } from "./RichTicker";
 import { MediaDisplay } from "./MediaDisplay";
 import { displayPages } from "./departures";
+import { FittedDepartureBoard } from "./FittedDepartureBoard";
 
 export function partPosition(part: SignagePart): CSSProperties {
   return { left: `${part.x}%`, top: `${part.y}%`, width: `${part.width}%`, height: `${part.height}%` };
@@ -28,7 +29,7 @@ export function SignagePartContent({ part, settings, data, now, showEnglish = fa
     return media.length ? <MediaDisplay media={media} transition={settings.transition} /> : <p className="part-placeholder">クイック設定で写真・動画を追加してください</p>;
   }
   const routes = part.routeIndex === undefined ? pageRoutes ?? displayPages(settings.selectedRoutes, settings.directionDisplayMode)[0] ?? [] : settings.selectedRoutes.slice(part.routeIndex, part.routeIndex + 1);
-  return routes.length ? <div className={`departure-pages${routes.length > 1 ? " combined" : ""}`}>{routes.map(selected => <DepartureBoard key={`${selected.railway}|${selected.station}|${selected.direction}`}
+  return routes.length ? <div className={`departure-pages layout-departure-pages${routes.length > 1 ? " combined" : ""}`} style={{ gridTemplateRows: `repeat(${routes.length}, minmax(0, 1fr))` }}>{routes.map(selected => <FittedDepartureBoard key={`${selected.railway}|${selected.station}|${selected.direction}`}><DepartureBoard
     selected={selected} tables={data?.timetables ?? []} now={now} showEnglish={showEnglish} fallbackMode={settings.directionDisplayMode}
-    travel={settings.travel} departureAnimation={settings.departureAnimation} fieldText={part.fieldText} fieldStyles={part.fieldStyles} />)}</div> : <p className="part-placeholder">クイック設定で路線・乗り物を追加してください</p>;
+    travel={settings.travel} departureAnimation={settings.departureAnimation} fieldText={part.fieldText} fieldStyles={part.fieldStyles} /></FittedDepartureBoard>)}</div> : <p className="part-placeholder">クイック設定で路線・乗り物を追加してください</p>;
 }

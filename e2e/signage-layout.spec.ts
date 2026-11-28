@@ -12,11 +12,11 @@ const user = { id: owner, aud: "authenticated", role: "authenticated", email: "l
 const token = `${Buffer.from('{"alg":"HS256"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub: owner, role: "authenticated", exp: 2000000000 })).toString("base64url")}.fixture`;
 const selected = { railway: "odpt.Railway:TokyoMetro.Ginza", station: "odpt.Station:TokyoMetro.Ginza.Asakusa", direction: "odpt.RailDirection:Outbound" };
 
-async function mockDisplay(context: BrowserContext, combined: boolean) {
+async function mockDisplay(context: BrowserContext, combined: boolean, directions = ["Outbound", "Inbound"]) {
   const record: DeviceRecord = { id: deviceId, owner_id: owner, name: "メイン画面", revision: 0, refresh_version: 0,
     display_enabled: true, last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString(),
     settings: { facilityName: "表示しない旧施設名", directionDisplayMode: combined ? "combined" : "separate",
-      selectedRoutes: combined ? [selected, { ...selected, direction: "odpt.RailDirection:Inbound" }] : [selected],
+      selectedRoutes: combined ? directions.map(direction => ({ ...selected, direction: `odpt.RailDirection:${direction}` })) : [selected],
       tickerText: "駅の案内です。gyp 下端まで読みやすく表示します。", ticker: { speed: 70, size: "medium", segments: [{ id: "notice", text: "駅の案内です。gyp 下端まで読みやすく表示します。" }] },
       mediaLayout: "alongside", media: [{ id: "photo", kind: "image", url: "https://layout.example.test/photo.svg", alt: "街の案内", durationSeconds: 15 }],
       updatedAt: "", devices: [{ id: "primary", code: "LCD-01", name: "メイン画面", type: "lcd", enabled: true }] } };
@@ -29,7 +29,7 @@ async function mockDisplay(context: BrowserContext, combined: boolean) {
     const address = new URL(route.request().url());
     let rows = odptFixture(address);
     if (address.pathname.endsWith("odpt:StationTimetable")) {
-      rows = (rows as Record<string, unknown>[]).flatMap(row => ["Outbound", "Inbound"].map(direction => ({ ...row,
+      rows = (rows as Record<string, unknown>[]).flatMap(row => directions.map(direction => ({ ...row,
         "owl:sameAs": `${row["owl:sameAs"]}.${direction}`, "odpt:railDirection": `odpt.RailDirection:${direction}`,
         "odpt:stationTimetableObject": ["24:15", "24:20"].map(time => ({ "odpt:departureTime": time, "odpt:destinationStation": [selected.station], "odpt:trainType": "odpt.TrainType:TokyoMetro.Local" })) })));
     }
@@ -37,6 +37,7 @@ async function mockDisplay(context: BrowserContext, combined: boolean) {
   });
   await context.route(`${cloud}/**`, route => {
     const pathname = new URL(route.request().url()).pathname;
+    if (pathname === "/rest/v1/dtis_devices" && !route.request().headers().accept?.includes("vnd.pgrst.object")) return route.fulfill({ json: [record] });
     return route.fulfill({ json: pathname === "/auth/v1/user" ? user : pathname.endsWith("dtis_heartbeat") ? null : record });
   });
   await context.routeWebSocket(`${cloud.replace("http", "ws")}/realtime/v1/websocket**`, ws => {
@@ -48,6 +49,59 @@ async function mockDisplay(context: BrowserContext, combined: boolean) {
   });
   return record;
 }
+
+test("all directions fit inside editor and Signage parts, including later preview pages", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  const record = await mockDisplay(context, true, ["Outbound", "Inbound", "Third", "Fourth"]);
+  record.settings.layout = initialLayout(record.settings);
+  const editor = await context.newPage(), signage = await context.newPage();
+  await editor.clock.setFixedTime(new Date("2026-11-16T03:00:00Z"));
+  await signage.clock.setFixedTime(new Date("2026-11-16T03:00:00Z"));
+  const checkBoards = async (page: typeof editor, selector: string) => {
+    const part = page.locator(selector);
+    await expect(part.locator(".departure-board")).toHaveCount(2);
+    await expect(part.locator(".departure-list article")).toHaveCount(4);
+    await expect(part.locator(".departure-list article").first()).toBeVisible();
+    await expect(part.locator(".departure-list article").last()).toBeVisible();
+    await expect.poll(() => part.evaluate(element => {
+      const bounds = element.getBoundingClientRect();
+      return [...element.querySelectorAll(".departure-board .route-heading,.departure-board .departure-list article")].filter(item => {
+        const rect = item.getBoundingClientRect();
+        return rect.top < bounds.top - 1 || rect.bottom > bounds.bottom + 1 || rect.left < bounds.left - 1 || rect.right > bounds.right + 1;
+      }).length;
+    })).toBe(0);
+    const boards = await part.locator(".departure-board").evaluateAll(elements => elements.map(el => {
+      const rect = el.getBoundingClientRect(); return { top: rect.top, bottom: rect.bottom };
+    }));
+    expect(boards[0].bottom).toBeLessThanOrEqual(boards[1].top + 1);
+  };
+  try {
+    await editor.goto(`${baseURL}controller/`);
+    await editor.getByRole("button", { name: /エディターで/ }).click();
+    await signage.goto(`${baseURL}signage/?device=${deviceId}`);
+    await editor.evaluate(() => document.fonts.ready); await signage.evaluate(() => document.fonts.ready);
+    for (const width of [1366, 820, 390]) {
+      await editor.setViewportSize({ width, height: 900 });
+      await signage.setViewportSize({ width, height: 900 });
+      await checkBoards(editor, ".editor-part:has(.departure-pages)");
+      await checkBoards(signage, ".signage-layout-part:has(.departure-pages)");
+      if (width !== 820) await editor.locator(".editor-canvas").screenshot({ path: `artifacts/editor-directions-${width}.png`, animations: "disabled", style: ".workspace-save,.cloud-account{visibility:hidden}" });
+    }
+    await editor.setViewportSize({ width: 1366, height: 900 });
+    await editor.getByLabel("編集する表示ページ").selectOption("1");
+    await expect(editor.locator(".editor-canvas .direction-name").first()).toContainText("Third");
+    await expect(editor.locator(".editor-canvas .direction-name").last()).toContainText("Fourth");
+    await checkBoards(editor, ".editor-part:has(.departure-pages)");
+    await editor.locator(".editor-canvas .direction-name h2").last().click();
+    await expect(editor.getByLabel("表示テキスト", { exact: true })).toBeVisible();
+    await editor.screenshot({ path: "artifacts/editor-multiple-directions.png", fullPage: true, animations: "disabled" });
+    await editor.getByLabel("編集する表示ページ").selectOption("0");
+    await editor.locator(".editor-canvas .direction-name h2").first().click();
+    await editor.locator(".part-geometry summary").click();
+    await editor.getByLabel("高さ（%）", { exact: true }).fill("60");
+    await checkBoards(editor, ".editor-part:has(.departure-pages)");
+  } finally { await context.close(); }
+});
 
 test("custom-layout media and scrolling text keep playing through language changes", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
