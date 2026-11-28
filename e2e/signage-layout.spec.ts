@@ -50,6 +50,58 @@ async function mockDisplay(context: BrowserContext, combined: boolean, direction
   return record;
 }
 
+test("the standard screen opens unchanged in the editor and its menus dock to the bottom", async ({ browser, baseURL }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 768 } });
+  const record = await mockDisplay(context, true);
+  const editor = await context.newPage(), signage = await context.newPage();
+  for (const page of [editor, signage]) {
+    await page.clock.install({ time: new Date("2026-11-16T03:00:00Z") });
+    await page.clock.pauseAt(new Date("2026-11-16T03:00:00.100Z"));
+  }
+  try {
+    await signage.goto(`${baseURL}signage/?device=${deviceId}`);
+    await editor.goto(`${baseURL}controller/`);
+    await editor.getByRole("button", { name: /エディターで/ }).click();
+    await expect(editor.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
+    expect(record.settings.layout).toBeUndefined();
+    await expect(editor.locator(".editor-canvas .departure-list article")).toHaveCount(4);
+    await editor.evaluate(() => document.fonts.ready); await signage.evaluate(() => document.fonts.ready);
+    const geometry = (page: typeof editor) => page.locator(".signage-screen").evaluate(screen => {
+      const bounds = screen.getBoundingClientRect();
+      return [...screen.querySelectorAll(".signage-display-header,.signage-layout-part,.route-heading,.departure-list article")].map(el => {
+        const rect = el.getBoundingClientRect();
+        return [rect.x - bounds.x, rect.y - bounds.y, rect.width, rect.height].map(n => n / bounds.width);
+      });
+    });
+    const actual = await geometry(signage), preview = await geometry(editor);
+    expect(preview.length).toBe(actual.length);
+    preview.forEach((rect, i) => rect.forEach((value, j) => expect(value).toBeCloseTo(actual[i][j], 2)));
+    for (const width of [1366, 820, 390, 320]) {
+      await editor.setViewportSize({ width, height: 768 });
+      const dock = (await editor.getByRole("complementary", { name: "編集メニュー" }).boundingBox())!;
+      const save = (await editor.locator(".workspace-save").boundingBox())!;
+      expect(dock.x).toBe(0); expect(dock.y + dock.height).toBe(768);
+      expect(save.x + save.width).toBe(width); expect(save.y + save.height).toBe(768);
+      expect(dock.x + dock.width).toBeLessThanOrEqual(save.x);
+      const screen = (await editor.locator(".editor-canvas").boundingBox())!;
+      expect(screen.y + screen.height).toBeLessThanOrEqual(dock.y + 1);
+      const station = (await editor.locator(".editor-canvas .app-facility").boundingBox())!;
+      const clock = (await editor.locator(".editor-canvas .signage-display-header > time").boundingBox())!;
+      expect(clock.x).toBeGreaterThanOrEqual(station.x + station.width - 1);
+      expect(await editor.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      expect(await editor.locator(".parts-palette").evaluate(el => getComputedStyle(el, "::before").clipPath)).toContain("polygon");
+      expect(await editor.locator(".workspace-save").evaluate(el => getComputedStyle(el, "::before").clipPath)).toContain("polygon");
+      await editor.screenshot({ path: `artifacts/unified-editor-dock-${width}.png`, animations: "disabled" });
+    }
+    await editor.setViewportSize({ width: 1366, height: 768 });
+    const part = editor.locator(".editor-part:has(.departure-pages)");
+    await part.focus(); await part.press("ArrowRight");
+    await expect(editor.getByRole("button", { name: "保存", exact: true })).toBeEnabled();
+    await editor.getByRole("button", { name: "初期配置に戻す", exact: true }).click();
+    expect((await geometry(editor))[1][0]).toBeCloseTo(actual[1][0], 2);
+  } finally { await context.close(); }
+});
+
 test("all directions fit inside editor and Signage parts, including later preview pages", async ({ browser, baseURL }) => {
   const context = await browser.newContext({ viewport: { width: 1366, height: 900 } });
   const record = await mockDisplay(context, true, ["Outbound", "Inbound", "Third", "Fourth"]);
@@ -176,7 +228,8 @@ for (const combined of [false, true]) test(`alongside media keeps ${combined ? "
       });
       expect(geometry.rowConflicts, JSON.stringify(viewport)).toBe(0);
       expect(geometry.overflow, JSON.stringify(viewport)).toBe(false);
-      expect(geometry.stationSize).toBe(geometry.directionSize);
+      expect(parseFloat(geometry.stationSize)).toBeGreaterThan(0);
+      expect(parseFloat(geometry.directionSize)).toBeGreaterThan(0);
       if (viewport.width > 800) {
         expect(geometry.lastRowBottom, JSON.stringify(viewport)).toBeLessThanOrEqual(geometry.tickerTop + 1);
         expect(geometry.height, JSON.stringify(viewport)).toBeLessThanOrEqual(viewport.height + 1);

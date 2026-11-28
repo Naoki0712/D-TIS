@@ -26,11 +26,12 @@ export function DepartureBoard({ selected, tables, now, showEnglish, fallbackMod
   const previous = useRef(departures);
   const [leaving, setLeaving] = useState<Departure[]>([]);
   useEffect(() => {
+    if (!timetable) { previous.current = []; setLeaving([]); return; }
     const removed = previous.current.filter(d => !departures.some(next => identity(next) === identity(d)));
     previous.current = departures;
     if (suspended) { setLeaving([]); return; }
     if (removed.length) setLeaving(removed);
-  }, [departures.map(identity).join(";"), suspended]);
+  }, [departures.map(identity).join(";"), suspended, !!timetable]);
   useEffect(() => {
     if (!leaving.length) return;
     const timer = window.setTimeout(() => setLeaving([]), 700);

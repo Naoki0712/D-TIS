@@ -25,7 +25,7 @@ export function ContentEditor({ settings, onChange, disabled }: { settings: Disp
         update({ appearance: { preset: "custom", customFont: { family: file.name.replace(/\.[^.]+$/, "").slice(0, 80), url,
           format: ext === "ttf" ? "truetype" : ext === "otf" ? "opentype" : ext as "woff2" | "woff" } } });
       } else addMedia(url, kind, file.name.slice(0, 200));
-      setNotice("追加しました。「Signageに反映して記録」で保存してください。");
+      setNotice("追加しました。「保存」で保存してください。");
     } catch (error) { if (alive.current) setNotice(error instanceof Error ? error.message : "アップロードに失敗しました。"); }
     finally { if (alive.current) setBusy(false); }
   }

@@ -154,7 +154,7 @@ test("one account controls independent Signages and persists fonts, GPS, media, 
     await controller.getByLabel("写真を追加", { exact: true }).setInputFiles({ name: "photo.png", mimeType: "image/png", buffer: png });
     await expect(controller.locator(".media-items article")).toHaveCount(1);
     expect(await controller.locator("input:invalid").evaluateAll(elements => elements.map(el => ({ name: (el as HTMLInputElement).outerHTML, message: (el as HTMLInputElement).validationMessage })))).toEqual([]);
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect.poll(() => api.rows.get(aId)?.revision, { timeout: 15000 }).toBe(1);
     expect(api.rows.get(bId)?.revision).toBe(0);
     expect(api.rows.get(aId)?.settings.travel).toMatchObject({ mode: "gps", latitude: 35, longitude: 139, minutes: 4 });
@@ -226,7 +226,7 @@ test("Controller grid edits, delayed times, suspension, and independent animatio
     await controller.getByLabel("発車時のアニメーション").selectOption("slide");
     await controller.getByLabel("画面切り替えのトランジション").selectOption("zoom");
     await controller.getByLabel("画面下部のスクロール文面").fill("足元にご注意ください");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect.poll(() => api.rows.get(id)?.revision).toBe(1);
     await expect(signage.locator("time.departure-delayed")).toContainText("00:22");
     await expect(signage.locator("time.departure-delayed small")).toHaveText("定刻 24:15 ＋7分");
@@ -268,13 +268,14 @@ test("Controller grid edits, delayed times, suspension, and independent animatio
     await expect(canvas.locator(".editor-part")).toHaveCount(4);
     await controller.getByRole("button", { name: "削除", exact: true }).click();
     await expect(canvas.locator(".editor-part")).toHaveCount(3);
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect.poll(() => api.rows.get(id)?.revision).toBe(2);
     await expect(signage.locator(".signage-layout-part")).toHaveCount(3);
     await expect(signage.locator(".route-name h2")).toHaveText("東京メトロ銀座線");
     await expect(signage.locator(".signage-part-text")).toHaveText("お乗り遅れにご注意ください");
     await expect(signage.locator(".signage-part-text")).toHaveClass(/ticker-blink/);
     await expect(signage.locator(".rich-ticker")).toHaveCount(1);
+    await controller.locator(".palette-layers summary").click();
     await controller.locator(".part-layers button").last().click();
     await expect(controller.getByRole("region", { name: "選択したパーツの編集" })).toBeVisible();
     await controller.screenshot({ path: "artifacts/controller-editor-desktop.png", fullPage: true, animations: "disabled" });
@@ -282,7 +283,7 @@ test("Controller grid edits, delayed times, suspension, and independent animatio
     await controller.reload();
     await controller.getByRole("button", { name: /エディターで/ }).click();
     await expect(canvas.locator(".editor-part")).toHaveCount(3);
-    await expect(controller.getByRole("button", { name: "Signageに反映して記録" })).toBeDisabled();
+    await expect(controller.getByRole("button", { name: "保存", exact: true })).toBeDisabled();
     for (const width of [820, 390, 320]) {
       await controller.setViewportSize({ width, height: 900 });
       expect(await controller.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -298,14 +299,14 @@ test("Controller grid edits, delayed times, suspension, and independent animatio
     await controller.getByRole("button", { name: /クイック設定/ }).click();
     await controller.getByLabel("運行状況", { exact: true }).selectOption("suspended");
     await controller.getByLabel("運行案内文").fill("運転再開は未定です");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect.poll(() => api.rows.get(id)?.revision).toBe(3);
     await expect(signage.locator(".service-suspended")).toContainText("運転見合わせ");
     await expect(signage.locator(".departure-list")).toHaveCount(0);
     await controller.screenshot({ path: "artifacts/controller-quick-mobile.png", fullPage: true, animations: "disabled" });
     await signage.screenshot({ path: "artifacts/signage-suspended.png", fullPage: true, animations: "disabled" });
     await controller.getByLabel("運行状況", { exact: true }).selectOption("normal");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect.poll(() => api.rows.get(id)?.revision).toBe(4);
     await expect(signage.locator(".service-suspended,.service-message,time.departure-delayed")).toHaveCount(0);
     await expect(signage.locator(".departure-list article")).toHaveCount(1);

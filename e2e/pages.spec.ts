@@ -171,7 +171,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await expect(controller.getByLabel("登録した路線").locator(".route-card")).toHaveCount(1);
 
     await controller.getByLabel("画面下部のスクロール文面").fill("足元にご注意ください");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 1");
     await expect(signage.locator(".app-facility")).toContainText("試験駅130駅");
     expect(commits[0].source).toBe("signage"); expect(commits[0].rendered).toContain("試験駅130駅");
@@ -189,7 +189,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
 
     rejectNextCommit = true;
     await controller.getByLabel("画面下部のスクロール文面").fill("記録に失敗する変更");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect(controller.locator(".feedback[role=status]")).toContainText("最新の設定を読み直してください");
     await expect(signage.getByLabel("お知らせ", { exact: true })).toContainText("足元にご注意ください");
     expect(record.revision).toBe(3); expect(history).toHaveLength(3);
@@ -209,7 +209,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     // Signage must reconcile the exact command rather than restore stale state.
     loseNextCommitResponse = true;
     await controller.getByLabel("画面下部のスクロール文面").fill("応答が失われても確定した案内文");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect(controller.locator(".cloud-sync")).toContainText("確定リビジョン 5");
     await expect(signage.getByLabel("お知らせ", { exact: true })).toContainText("応答が失われても確定した案内文");
     await expect(controller.getByLabel("画面下部のスクロール文面")).toHaveText("応答が失われても確定した案内文");
@@ -240,7 +240,7 @@ test("static Pages applications apply, paint, commit, requery, and relay the act
     await expect(settingsDialog.getByLabel("操作するSignage")).toHaveCount(0);
     await expect(controller.locator(".workspace-heading")).toContainText("表示中");
     await settingsDialog.getByLabel("デバイス名", { exact: true }).fill("入口の画面");
-    await controller.getByRole("button", { name: "Signageに反映して記録" }).click();
+    await controller.getByRole("button", { name: "保存", exact: true }).click();
     await expect(settingsDialog.locator(".cloud-sync")).toContainText("確定リビジョン 6");
     expect(record.settings.devices[0].name).toBe("入口の画面");
     await controller.screenshot({ path: "artifacts/pages-controller-device-mobile.png", fullPage: true });

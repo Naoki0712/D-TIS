@@ -29,7 +29,9 @@ export function SignagePartContent({ part, settings, data, now, showEnglish = fa
     return media.length ? <MediaDisplay media={media} transition={settings.transition} /> : <p className="part-placeholder">クイック設定で写真・動画を追加してください</p>;
   }
   const routes = part.routeIndex === undefined ? pageRoutes ?? displayPages(settings.selectedRoutes, settings.directionDisplayMode)[0] ?? [] : settings.selectedRoutes.slice(part.routeIndex, part.routeIndex + 1);
-  return routes.length ? <div className={`departure-pages layout-departure-pages${routes.length > 1 ? " combined" : ""}`} style={{ gridTemplateRows: `repeat(${routes.length}, minmax(0, 1fr))` }}>{routes.map(selected => <FittedDepartureBoard key={`${selected.railway}|${selected.station}|${selected.direction}`}><DepartureBoard
+  if (!routes.length) return <section className="odpt-empty part-empty"><span>CONTROLLER</span><h2>表示する路線を追加してください</h2><p>路線・駅・方面を選択すると、ここに時刻表を表示します。</p></section>;
+  if (!data || data.source === "unavailable") return <section className="odpt-empty part-empty"><span>ODPT</span><h2>データ接続中</h2><p>{data?.error ?? "駅時刻表を取得しています。"}</p></section>;
+  return <div className={`departure-pages layout-departure-pages${routes.length > 1 ? " combined" : ""}`} data-page-transition={settings.transition ?? "fade"} style={{ gridTemplateRows: `repeat(${routes.length}, minmax(0, 1fr))` }}>{routes.map(selected => <FittedDepartureBoard key={`${selected.railway}|${selected.station}|${selected.direction}`}><DepartureBoard
     selected={selected} tables={data?.timetables ?? []} now={now} showEnglish={showEnglish} fallbackMode={settings.directionDisplayMode}
-    travel={settings.travel} departureAnimation={settings.departureAnimation} fieldText={part.fieldText} fieldStyles={part.fieldStyles} /></FittedDepartureBoard>)}</div> : <p className="part-placeholder">クイック設定で路線・乗り物を追加してください</p>;
+    travel={settings.travel} departureAnimation={settings.departureAnimation} fieldText={part.fieldText} fieldStyles={part.fieldStyles} /></FittedDepartureBoard>)}</div>;
 }
